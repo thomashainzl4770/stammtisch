@@ -368,6 +368,8 @@ function keep(fn){const saved={};document.querySelectorAll("[data-keep]").forEac
 
 /* ---------- Abend ---------- */
 const curKey=()=>mkey(view.y,view.m);
+const isFutureMeeting=mt=>mt.date>todayISO&&!Object.values(mt.entries||{}).some(e=>e&&e.s);
+function futureLock(){if(isFutureMeeting(getMeeting(curKey()))){toast("Dieser Stammtisch war noch nicht. Eintragen geht ab dem Tag selbst.");return true}return false}
 function saveMeeting(k,patch){const mt={...getMeeting(k),...patch};delete mt._new;S.meetings[k]=mt;render();store.set("meetings",k,mt)}
 
 function renderAbend(){
@@ -386,6 +388,20 @@ function renderAbend(){
   if(mt.cancelled)h+=`<div class="banner">Dieser Stammtisch ist abgesagt. Es fallen keine Beiträge oder Strafen an.</div>`;
   else if(moved)h+=`<div class="banner info">Verlegt auf ${fmtDL(mt.date)}.</div>`;
   const yes=Object.values(R).filter(r=>r.a==="yes").length,no=Object.values(R).filter(r=>r.a==="no").length;
+  /* Stammtisch in der Zukunft: nur Planung (Rückmeldungen), keine Anwesenheit/Zahlungen */
+  if(isFutureMeeting(mt)&&!mt.cancelled){
+    const days=Math.round((new Date(mt.date+"T12:00")-new Date(todayISO+"T12:00"))/864e5);
+    const ys=rows.filter(([id])=>R[id]?.a==="yes"),ns=rows.filter(([id])=>R[id]?.a==="no"),nr=rows.filter(([id])=>!R[id]);
+    const names=l=>l.length?l.map(([,m])=>esc(first(m.name))).join(", "):"–";
+    h+=`<div class="banner info">Dieser Stammtisch ist erst am <b>${fmtDL(mt.date)}</b> (in ${days} ${days===1?"Tag":"Tagen"}). Anwesenheit und Zahlungen trägst du ab diesem Tag ein.${K()?" Verlegen oder absagen kannst du schon jetzt.":""}</div>
+      <div class="card pad stack"><h3>Rückmeldungen</h3>
+        <div><span class="chip good">Kommen (${ys.length})</span> ${names(ys)}</div>
+        <div><span class="chip warn">Kommen nicht (${ns.length})</span> ${names(ns)}</div>
+        <div><span class="chip">Noch keine Rückmeldung (${nr.length})</span> ${names(nr)}</div>
+        ${K()&&nr.length?`<div class="row">${waBtn(`Erinnerung Stammtisch: ${fmtDL(mt.date)}${moved?" (verlegt!)":""}. Bitte in der App zu- oder absagen.`,"Erinnerung teilen")}</div>`:""}
+        <div class="note">Zu- und Absagen trägt jeder selbst im Tab <b>Termine</b> ein${K()?", du kannst es dort auch für andere erledigen":""}.</div></div>`;
+    keep(()=>$("#abendBody").innerHTML=h);return}
+  if(isFutureMeeting(mt))h+=`<div class="banner">Achtung: Dieser Stammtisch war noch nicht, es ist aber schon etwas eingetragen. Prüf die Einträge und nimm sie bei Bedarf zurück.</div>`;
   h+=`<div class="stats">
     <div class="card stat"><div class="lbl">Anwesend</div><div class="val num">${t.a}<span class="note"> / ${rows.length}</span></div></div>
     <div class="card stat"><div class="lbl">Nicht da</div><div class="val num ${t.x?"bad":""}">${t.x}</div></div>
@@ -591,7 +607,7 @@ function renderKasse(){
         ${K()?`<button class="btn small" data-act="payFor" data-mid="${id}">Zahlung</button>`:""}
         ${K()&&b<-0.005?`<a class="btn small" href="https://wa.me/${waNumber(m.phone)}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp</a><button class="btn small" data-act="copyMsg" data-mid="${id}">Text kopieren</button>`:""}</span></div>
         ${K()&&view.payFor===id?`<form class="inline" data-form="payment" data-mid="${id}"><input type="number" id="payAmt" data-keep step="0.01" min="0.01" placeholder="Betrag €" style="width:10ch" value="${b<0?(-b).toFixed(2):""}" required>
-          <input type="date" id="payDate" data-keep value="${todayISO}"><input type="text" id="payNote" data-keep placeholder="z. B. Nachzahlung, Vorauszahlung 2027">
+          <input type="date" id="payDate" data-keep value="${todayISO}" max="${todayISO}"><input type="text" id="payNote" data-keep placeholder="z. B. Nachzahlung, Vorauszahlung 2027">
           <button class="btn primary small">Buchen</button><button class="btn small" type="button" data-act="payCancel">Abbrechen</button></form>`:""}</li>`}).join("")
       :`<li class="empty">Alle sind ausgeglichen.</li>`}</ul>
     <div class="note pad" style="padding-top:0">Zahlungen werden automatisch mit offenen Abenden verrechnet, die ältesten zuerst; reicht eine Zahlung nicht ganz, bleibt beim Abend der Rest offen. Was übrig bleibt, ist Guthaben für die nächsten Stammtische. Ohne hinterlegte Telefonnummer wählst du den Kontakt in WhatsApp selbst.</div></div>`;
@@ -599,7 +615,7 @@ function renderKasse(){
   const evOpts=Object.entries(S.events).sort((a,b)=>b[1].date.localeCompare(a[1].date));
   if(K())h+=`<div class="card pad stack"><h3>Buchung</h3><form class="inline" data-form="tx">
       <select id="txKind" data-keep aria-label="Art"><option value="out">Ausgabe</option><option value="in">Einnahme</option></select>
-      <input type="date" id="txDate" data-keep value="${todayISO}" aria-label="Datum" required>
+      <input type="date" id="txDate" data-keep value="${todayISO}" max="${todayISO}" aria-label="Datum" required>
       <input type="text" id="txText" data-keep placeholder="Wofür? z. B. Kranz, Spende, Anfangsbestand" required>
       <input type="number" id="txAmt" data-keep placeholder="Betrag €" step="0.01" min="0.01" style="width:10ch" required>
       <select id="txEvent" data-keep aria-label="Veranstaltung"><option value="">keine Veranstaltung</option>${evOpts.map(([id,e])=>`<option value="${id}">${esc(e.title)}</option>`).join("")}</select>
@@ -713,16 +729,20 @@ function renderStatistik(){
 function renderChronik(){
   const dec=Object.entries(S.decisions).sort((a,b)=>b[1].date.localeCompare(a[1].date));
   let h=`<h2>Beschlüsse</h2>`;
-  if(K())h+=`<div class="card pad"><form class="inline" data-form="decision"><input type="date" id="decDate" data-keep value="${todayISO}" aria-label="Datum"><input type="text" id="decText" data-keep placeholder="z. B. Ab 2027 Beitrag 15 €" required><button class="btn primary">Festhalten</button></form></div>`;
-  h+=`<div class="card"><ul class="list ledger">${dec.length?dec.map(([id,d])=>`<li><span class="date num">${fmtD(d.date)}</span><span>${esc(d.text)}</span><span></span><span class="del">${K()?`<button class="btn small danger" data-act="decDel" data-id="${id}">Löschen</button>`:""}</span></li>`).join("")
+  if(K())h+=`<div class="card pad"><form class="inline" data-form="decision"><input type="date" id="decDate" data-keep value="${todayISO}" max="${todayISO}" aria-label="Datum"><input type="text" id="decText" data-keep placeholder="z. B. Ab 2027 Beitrag 15 €" required><button class="btn primary">Festhalten</button></form></div>`;
+  h+=`<div class="card"><ul class="list ledger">${dec.length?dec.map(([id,d])=>K()&&view.editDec===id
+      ?`<li style="display:block"><form class="inline" data-form="decSave" data-id="${id}"><input type="date" id="decEdDate" data-keep value="${esc(d.date)}" max="${todayISO}" aria-label="Datum"><input type="text" id="decEdText" data-keep value="${esc(d.text)}" required>
+          <button class="btn primary small">Speichern</button><button class="btn small" type="button" data-act="decEdit" data-id="">Abbrechen</button></form></li>`
+      :`<li><span class="date num">${fmtD(d.date)}</span><span>${esc(d.text)}</span><span></span><span class="del">${K()?`<span class="row" style="flex-wrap:nowrap"><button class="btn small" data-act="decEdit" data-id="${id}">Bearbeiten</button><button class="btn small danger" data-act="decDel" data-id="${id}">Löschen</button></span>`:""}</span></li>`).join("")
     :`<li class="empty" style="display:block">Noch keine Beschlüsse festgehalten.</li>`}</ul></div>`;
   const mts=Object.entries(S.meetings).filter(([,mt])=>mt.date<=todayISO&&(mt.cancelled||Object.values(mt.entries||{}).some(e=>e.s)||mt.note||(mt.photos||[]).length)).sort((a,b)=>b[1].date.localeCompare(a[1].date));
   h+=`<h2>Chronik</h2>`;
   h+=mts.length?mts.map(([k,mt])=>{const pres=Object.entries(mt.entries||{}).filter(([,e])=>e.s==="a").map(([id])=>first(mName(id)));
-    return`<div class="card pad stack"><div class="row spread"><h3>${fmtDL(mt.date)} ${mt.date.slice(0,4)}</h3>${mt.cancelled?`<span class="chip bad">abgesagt</span>`:`<span class="chip good">${pres.length} da</span>`}</div>
+    return`<div class="card pad stack"><div class="row spread"><h3>${fmtDL(mt.date)} ${mt.date.slice(0,4)}</h3><span class="row">${mt.cancelled?`<span class="chip bad">abgesagt</span>`:`<span class="chip good">${pres.length} da</span>`}
+        ${K()?`<button class="btn small" data-act="openMeeting" data-k="${k}">Bearbeiten</button><button class="btn small danger" data-act="meetingDel" data-k="${k}">Löschen</button>`:""}</span></div>
       ${!mt.cancelled&&pres.length?`<div class="note">Dabei: ${pres.map(esc).join(", ")}${(mt.guests||[]).length?` · Gäste: ${mt.guests.map(esc).join(", ")}`:""}${(mt.rounds||[]).length?` · Runden: ${mt.rounds.map(id=>esc(first(mName(id)))).join(", ")}`:""}</div>`:""}
       ${mt.note?`<div style="white-space:pre-wrap">${esc(mt.note)}</div>`:""}
-      ${(mt.photos||[]).length?`<div class="photos">${mt.photos.map(p=>`<figure><a href="#" data-act="viewImg" data-id="${esc(p)}"><img src="${imgSrc(p)}" data-blob="${esc(p)}" alt="Foto vom Stammtisch" loading="lazy"></a></figure>`).join("")}</div>`:""}</div>`}).join("")
+      ${(mt.photos||[]).length?`<div class="photos">${mt.photos.map(p=>`<figure><a href="#" data-act="viewImg" data-id="${esc(p)}"><img src="${imgSrc(p)}" data-blob="${esc(p)}" alt="Foto vom Stammtisch" loading="lazy"></a>${K()?`<button data-act="photoDel" data-k="${k}" data-id="${esc(p)}">Entfernen</button>`:""}</figure>`).join("")}</div>`:""}</div>`}).join("")
     :`<div class="card empty">Die Chronik füllt sich mit jedem Stammtisch: Anwesende, Gäste, Protokoll und Fotos.</div>`;
   keep(()=>$("#v-chronik").innerHTML=h);
 }
@@ -834,30 +854,35 @@ const ACT={
   cancelToggle:()=>{const k=curKey(),mt=getMeeting(k);
     if(!mt.cancelled&&Object.values(mt.entries||{}).some(e=>e.paid)){toast("Es wurde schon kassiert. Nimm zuerst die Bezahlt-Vermerke zurück, dann kannst du absagen.");return}
     saveMeeting(k,{cancelled:!mt.cancelled})},
-  seg:b=>{const k=curKey(),mt=getMeeting(k),id=b.dataset.mid,entries={...(mt.entries||{})},cur={...(entries[id]||{})};
+  seg:b=>{if(futureLock())return;const k=curKey(),mt=getMeeting(k),id=b.dataset.mid,entries={...(mt.entries||{})},cur={...(entries[id]||{})};
     if(cur.s===b.dataset.s){delete entries[id];if(cur.paid)toast("Eintrag samt Bezahlt-Vermerk entfernt.")}
     else{entries[id]={s:b.dataset.s,paid:false};if(cur.paid)toast("Betrag hat sich geändert: Bitte die Zahlung neu abhaken.")}
     saveMeeting(k,{entries})},
-  pay:b=>{const k=curKey(),mt=getMeeting(k),id=b.dataset.mid,entries={...(mt.entries||{})};if(!entries[id]?.s)return;
+  pay:b=>{if(futureLock())return;const k=curKey(),mt=getMeeting(k),id=b.dataset.mid,entries={...(mt.entries||{})};if(!entries[id]?.s)return;
     const LL=ledger()[id];if(!entries[id].paid&&LL?.cov.has(k)){toast("Schon über eine Zahlung beglichen.");return}
     if(!entries[id].paid&&LL?.part[k]){const rest=Math.round((due(mt,entries[id])-LL.part[k])*100)/100;payRest(id,k,mt,rest);toast(`Rest ${eur(rest)} von ${first(mName(id))} gebucht`);return}entries[id]={...entries[id],paid:!entries[id].paid};saveMeeting(k,{entries})},
-  allA:()=>{const k=curKey(),mt=getMeeting(k),entries={...(mt.entries||{})};sortedMembers(false).forEach(([id])=>{if(!entries[id]?.s)entries[id]={s:"a",paid:false}});saveMeeting(k,{entries})},
-  takeRsvp:()=>{const k=curKey(),mt=getMeeting(k),R=rsvpMap(k),dl=deadline(mt),entries={...(mt.entries||{})};let n=0;
+  allA:()=>{if(futureLock())return;const k=curKey(),mt=getMeeting(k),entries={...(mt.entries||{})};sortedMembers(false).forEach(([id])=>{if(!entries[id]?.s)entries[id]={s:"a",paid:false}});saveMeeting(k,{entries})},
+  takeRsvp:()=>{if(futureLock())return;const k=curKey(),mt=getMeeting(k),R=rsvpMap(k),dl=deadline(mt),entries={...(mt.entries||{})};let n=0;
     for(const[id,r]of Object.entries(R))if(r.a==="no"&&!entries[id]?.s&&S.members[id]){entries[id]={s:"x",paid:false};n++}
     saveMeeting(k,{entries});toast(n?`${n} als „nicht da“ eingetragen`:"Keine offenen Absagen")},
-  allPaid:()=>{const k=curKey(),mt=getMeeting(k),L=ledger(),entries={};
+  allPaid:()=>{if(futureLock())return;const k=curKey(),mt=getMeeting(k),L=ledger(),entries={};
     for(const[id,e]of Object.entries(mt.entries||{})){
       if(e.s&&!e.paid&&L[id]?.part[k]){payRest(id,k,mt,Math.round((due(mt,e)-L[id].part[k])*100)/100);entries[id]=e}
       else entries[id]=e.s&&!L[id]?.cov.has(k)?{...e,paid:true}:e}
     saveMeeting(k,{entries})},
   guestDel:b=>{const k=curKey(),g=[...(getMeeting(k).guests||[])];g.splice(+b.dataset.i,1);saveMeeting(k,{guests:g})},
   roundDel:b=>{const k=curKey(),r=[...(getMeeting(k).rounds||[])];r.splice(+b.dataset.i,1);saveMeeting(k,{rounds:r})},
-  roundRandom:()=>{const k=curKey(),mt=getMeeting(k);const pres=Object.entries(mt.entries||{}).filter(([id,e])=>e.s==="a"&&S.members[id]).map(([id])=>id);
+  roundRandom:()=>{if(futureLock())return;const k=curKey(),mt=getMeeting(k);const pres=Object.entries(mt.entries||{}).filter(([id,e])=>e.s==="a"&&S.members[id]).map(([id])=>id);
     if(!pres.length){toast("Zuerst die Anwesenden abhaken.");return}
     const cnt={};pres.forEach(id=>cnt[id]=0);for(const[kk,m]of Object.entries(S.meetings))if(kk.startsWith(k.slice(0,4)))(m.rounds||[]).forEach(id=>{if(id in cnt)cnt[id]++});
     const min=Math.min(...Object.values(cnt));const pool=pres.filter(id=>cnt[id]===min);const pick=pool[Math.floor(Math.random()*pool.length)];
     saveMeeting(k,{rounds:[...(mt.rounds||[]),pick]});toast(`${first(mName(pick))} zahlt die Runde!`)},
-  photoDel:b=>confirmBtn(b,()=>{const k=curKey();saveMeeting(k,{photos:(getMeeting(k).photos||[]).filter(p=>p!==b.dataset.id)})}),
+  photoDel:b=>confirmBtn(b,()=>{const k=b.dataset.k||curKey();saveMeeting(k,{photos:(getMeeting(k).photos||[]).filter(p=>p!==b.dataset.id)})}),
+  openMeeting:b=>{const k=b.dataset.k;view.y=+k.slice(0,4);view.m=+k.slice(5)-1;view.tab="abend";try{localStorage.setItem("stt-tab","abend")}catch{}render();window.scrollTo(0,0)},
+  meetingDel:b=>{const k=b.dataset.k,mt=S.meetings[k];if(!mt)return;
+    if(Object.values(mt.entries||{}).some(e=>e.paid)){toast("Bei diesem Abend wurde kassiert. Nimm zuerst unter „Bearbeiten“ die Bezahlt-Vermerke zurück, sonst stimmt die Kasse nicht mehr.");return}
+    confirmBtn(b,()=>{delete S.meetings[k];store.del("meetings",k);render();toast(`Stammtisch ${keyName(k)} gelöscht`)})},
+  decEdit:b=>{view.editDec=b.dataset.id||null;render()},
   rsvp:b=>{const me=myMember();if(!me)return;setRsvp(b.dataset.k,me,b.dataset.a,true)},
   rsvpFor:b=>{const sel=document.getElementById("rsf-"+b.dataset.k);if(!sel||!sel.value)return;const k=b.dataset.k,mt=getMeeting(k);
     const at=new Date().toISOString().slice(0,16);saveMeeting(k,{rsvp:{...(mt.rsvp||{}),[sel.value]:{a:b.dataset.a,at}}});toast(`${first(mName(sel.value))}: ${b.dataset.a==="yes"?"Zusage":"Absage"} gespeichert`)},
@@ -889,8 +914,8 @@ const ACT={
   exportPdf:()=>exportPdf(),exportXlsx:()=>exportXlsx()
 };
 const FORM={
-  guest:f=>{const v=$("#guestName").value.trim();if(!v)return;const k=curKey();$("#guestName").value="";saveMeeting(k,{guests:[...(getMeeting(k).guests||[]),v]})},
-  round:f=>{const v=$("#roundMem").value;if(!v)return;const k=curKey();saveMeeting(k,{rounds:[...(getMeeting(k).rounds||[]),v]});toast(`Runde von ${first(mName(v))} eingetragen`)},
+  guest:f=>{if(futureLock())return;const v=$("#guestName").value.trim();if(!v)return;const k=curKey();$("#guestName").value="";saveMeeting(k,{guests:[...(getMeeting(k).guests||[]),v]})},
+  round:f=>{if(futureLock())return;const v=$("#roundMem").value;if(!v)return;const k=curKey();saveMeeting(k,{rounds:[...(getMeeting(k).rounds||[]),v]});toast(`Runde von ${first(mName(v))} eingetragen`)},
   event:f=>{const e={title:$("#evTitle").value.trim(),date:$("#evDate").value,place:$("#evPlace").value.trim(),note:$("#evNote").value.trim(),created:new Date().toISOString(),createdBy:role.me||""};if(!e.title||!e.date)return;
     const id=uid("e");S.events[id]=e;store.set("events",id,e);["#evTitle","#evDate","#evPlace","#evNote"].forEach(s=>$(s).value="");render();toast("Veranstaltung angelegt")},
   poll:f=>{const q=$("#pollQ").value.trim(),o=$("#pollO").value.split(",").map(s=>s.trim()).filter(Boolean);if(!q||o.length<2){toast("Bitte mindestens zwei Antworten angeben.");return}
@@ -912,6 +937,8 @@ const FORM={
     const t={text,assignee:g("who").value||"",due:g("due").value||"",eventId:(g("ev")?g("ev").value:f.dataset.ev)||"",meetingKey:f.dataset.mk||"",done:false,doneAt:"",doneBy:"",createdBy:role.me||"",created:new Date().toISOString()};
     const id=uid("a");S.todos[id]=t;store.set("todos",id,t);g("text").value="";g("due").value="";render();
     toast(t.assignee?`Aufgabe für ${first(mName(t.assignee))} angelegt`:"Aufgabe angelegt")},
+  decSave:f=>{const id=f.dataset.id,t=$("#decEdText").value.trim();if(!t||!S.decisions[id])return;const d={...S.decisions[id],date:$("#decEdDate").value||S.decisions[id].date,text:t};
+    S.decisions[id]=d;store.set("decisions",id,d);view.editDec=null;render();toast("Beschluss geändert")},
   decision:f=>{const d={date:$("#decDate").value||todayISO,text:$("#decText").value.trim()};if(!d.text)return;const id=uid("d");S.decisions[id]=d;store.set("decisions",id,d);$("#decText").value="";render();toast("Beschluss festgehalten")}
 };
 const CHG={
