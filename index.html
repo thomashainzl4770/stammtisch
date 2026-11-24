@@ -1,0 +1,937 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2E6A48" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141A16" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Stammtisch">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Stammtisch</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: schmale Wirtshaus-Kladde – Kopf mit Kassastand, scrollbare Tabs, darunter eine Spalte mit Karten */
+:root{
+  --bg:#F3F5F1; --surface:#FFFFFF; --sunk:#EBEFE9; --ink:#1D2620; --muted:#5E6B62; --line:#DCE2DA;
+  --accent:#2E6A48; --accent-ink:#FFFFFF; --amber:#9A6508; --amber-soft:#FBEFD6;
+  --good:#2E7D4F; --good-soft:#E2F2E8; --bad:#B3402F; --bad-soft:#F8E3DF; --info:#3D6290; --info-soft:#E3ECF7;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141A16; --surface:#1C2420; --sunk:#18201C; --ink:#E6ECE6; --muted:#9AA79E; --line:#2E3832;
+  --accent:#5FB384; --accent-ink:#0E1511; --amber:#E2A63C; --amber-soft:#3A2E17;
+  --good:#6BC892; --good-soft:#1E3326; --bad:#E58372; --bad-soft:#3A221E; --info:#8DB2E3; --info-soft:#1F2A3A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141A16; --surface:#1C2420; --sunk:#18201C; --ink:#E6ECE6; --muted:#9AA79E; --line:#2E3832;
+  --accent:#5FB384; --accent-ink:#0E1511; --amber:#E2A63C; --amber-soft:#3A2E17;
+  --good:#6BC892; --good-soft:#1E3326; --bad:#E58372; --bad-soft:#3A221E; --info:#8DB2E3; --info-soft:#1F2A3A; color-scheme:dark}
+*{box-sizing:border-box} [hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 56px}
+.wrap{max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;letter-spacing:.01em;margin:0;text-wrap:balance}
+h1{font-size:2.1rem;line-height:1} h2{font-size:1.45rem} h3{font-size:1.15rem}
+.num{font-variant-numeric:tabular-nums}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.sub{color:var(--muted);font-size:.85rem;margin-top:4px}
+.kasse-pill{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 14px;text-align:right}
+.kasse-pill .lbl,.lbl{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.kasse-pill .val{font-family:var(--f-display);font-size:1.6rem;font-weight:700}
+nav{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+nav button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 11px;font:600 .93rem var(--f-body);color:var(--muted);cursor:pointer;white-space:nowrap}
+nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--bad)}
+.btn.small{padding:4px 9px;font-size:.84rem}
+.btn.link{border:0;background:none;padding:2px 4px;color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+a{color:var(--accent)}
+input,select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-width:0}
+textarea{width:100%;min-height:90px;resize:vertical}
+input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.pad{padding:14px} .stack{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spread{justify-content:space-between}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.section{display:flex;flex-direction:column;gap:14px}
+.monthbar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.monthbar .title{display:flex;align-items:center;gap:6px}
+.monthbar h2{min-width:9.5ch;text-align:center}
+.list{list-style:none;margin:0;padding:0}
+.list>li{padding:10px 14px;border-top:1px solid var(--line)}
+.list>li:first-child{border-top:0}
+.att{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:10px;align-items:center}
+.name{font-weight:600;overflow-wrap:anywhere}
+.hints{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:6px 9px;cursor:pointer;font-size:.83rem;font-weight:500;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on-a{background:var(--good-soft);color:var(--good)}
+.seg button.on-x{background:var(--bad-soft);color:var(--bad)}
+.seg button.on-y{background:var(--good-soft);color:var(--good)}
+.seg button.on-n{background:var(--bad-soft);color:var(--bad)}
+.due{min-width:4.8ch;text-align:right;font-weight:600}
+.due small{display:block;font-size:.68rem;font-weight:500;color:var(--muted)}
+.pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:.78rem;font-weight:600;background:var(--surface);color:var(--muted);white-space:nowrap}
+button.pill{cursor:pointer}
+.pill.paid,.chip.good{background:var(--good-soft);color:var(--good);border-color:transparent}
+.pill.cov,.chip.info{background:var(--info-soft);color:var(--info);border-color:transparent}
+.pill.open,.chip.warn{background:var(--amber-soft);color:var(--amber);border-color:transparent}
+.chip.bad{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.pill:disabled{opacity:.35;cursor:default}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;padding:2px 8px;border-radius:999px;background:var(--sunk);color:var(--muted);font-weight:600}
+.chip button{border:0;background:none;padding:0 0 0 2px;cursor:pointer;color:inherit;font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px}
+.stat{padding:12px 14px}
+.stat .val{font-family:var(--f-display);font-size:1.55rem;font-weight:700;line-height:1.1}
+.val.bad{color:var(--bad)} .val.good{color:var(--good)}
+.empty{padding:22px 16px;text-align:center;color:var(--muted)}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{padding:9px 12px;text-align:right;border-top:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{border-top:0;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;min-width:56px}
+.bar span{display:block;height:100%;background:var(--accent)}
+form.inline{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+form.inline input[type=text]{flex:1 1 170px}
+.ledger>li{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center}
+.date{color:var(--muted);font-size:.84rem;min-width:5.6ch}
+.amt.in{color:var(--good)} .amt.out{color:var(--bad)}
+.note{font-size:.84rem;color:var(--muted)}
+.banner{background:var(--amber-soft);color:var(--ink);border-radius:10px;padding:10px 14px;font-size:.88rem}
+.banner.info{background:var(--info-soft)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:.9rem;z-index:20;max-width:calc(100% - 32px)}
+.chart svg{display:block;width:100%;height:auto}
+.chart text{fill:var(--muted);font-size:11px;font-family:var(--f-body)}
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.photos figure{margin:0;position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--sunk);max-width:100%}
+.photos img{width:100%;height:100%;object-fit:cover;display:block}
+.photos figure button{position:absolute;top:4px;right:4px;background:var(--surface);border:1px solid var(--line);border-radius:6px;font-size:.72rem;padding:2px 6px;cursor:pointer;color:var(--bad)}
+.badges{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.badge{padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.badge .medal{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;background:var(--amber-soft);color:var(--amber);margin-bottom:4px}
+.badge .who{font-weight:600;overflow-wrap:anywhere}
+.set-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:end}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted)}
+label.cb{display:flex;gap:8px;align-items:center;font-size:.88rem}
+.contact{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:start}
+.contact .det{font-size:.86rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px}
+.contact .det span{user-select:all}
+.poll-opt{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center}
+.poll-opt .bar{grid-column:1/-1}
+.poll-opt button.mine{border-color:var(--accent);color:var(--accent);font-weight:600}
+.meet{display:flex;flex-direction:column;gap:8px}
+.k-hide{display:none!important}
+.dot{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:5px;border-radius:9px;background:var(--bad);color:var(--surface);font-size:.7rem;font-weight:700;vertical-align:1px}
+.chip.new{background:var(--accent);color:var(--accent-ink)}
+.lightbox{position:fixed;inset:0;z-index:40;background:rgba(10,14,12,.9);display:grid;place-items:center;gap:12px;align-content:center;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.lightbox img{max-width:100%;max-height:80vh;border-radius:8px}
+.gate{position:fixed;inset:0;z-index:35;background:var(--bg);display:grid;place-items:center;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.gate input{font-size:1.2rem;letter-spacing:.2em;text-align:center}
+.gate-icon{width:56px;height:56px;border-radius:12px;background:var(--accent);display:grid;place-items:center}
+.gate-icon span{background:var(--surface);color:var(--accent);font-family:var(--f-display);font-weight:700;font-size:1.25rem;border-radius:6px;padding:2px 7px}
+@media (max-width:540px){
+  .att{grid-template-columns:minmax(0,1fr) auto}
+  .att .seg{grid-column:1/-1;justify-self:start}
+  .ledger>li{grid-template-columns:auto minmax(0,1fr) auto}
+  .ledger>li .del{grid-column:2/-1;justify-self:end}
+  .contact{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<script src="firebase-config.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Stammtisch</h1>
+      <div class="sub" id="nextInfo">Jeden 16. im Monat</div>
+    </div>
+    <div class="kasse-pill"><div class="lbl">Kassastand</div><div class="val num" id="hdrKasse">–</div></div>
+  </header>
+  <div class="banner" id="demoBanner" hidden>Vorschau mit Beispieldaten: Die Datenbank ist noch nicht verbunden, hier wird nichts gespeichert. Trag deine Firebase-Daten in <b>firebase-config.js</b> ein (siehe Anleitung).</div>
+  <div class="banner info row spread" id="installHint" hidden><span id="installText"></span><span class="row"><button class="btn small primary" id="installBtn" data-act="install" hidden>Installieren</button><button class="btn small" data-act="installHide">Ausblenden</button></span></div>
+  <div class="banner" id="loadNote" hidden>Die Daten sind gerade nicht erreichbar. Die Anzeige ist vielleicht nicht aktuell.</div>
+  <div class="banner info" id="roleNote" hidden></div>
+  <nav role="tablist" id="tabs">
+    <button role="tab" data-act="tab" data-tab="abend">Abend</button>
+    <button role="tab" data-act="tab" data-tab="termine">Termine</button>
+    <button role="tab" data-act="tab" data-tab="kasse">Kasse</button>
+    <button role="tab" data-act="tab" data-tab="leute">Leute</button>
+    <button role="tab" data-act="tab" data-tab="statistik">Statistik</button>
+    <button role="tab" data-act="tab" data-tab="chronik">Chronik</button>
+  </nav>
+  <section class="section" id="v-abend">
+    <div class="monthbar">
+      <div class="title">
+        <button class="btn small" data-act="prevM" aria-label="Vorheriger Monat">‹</button>
+        <h2 id="monthTitle">–</h2>
+        <button class="btn small" data-act="nextM" aria-label="Nächster Monat">›</button>
+      </div>
+      <div class="row" id="dateCtl"></div>
+    </div>
+    <div id="abendBody" class="section"></div>
+  </section>
+  <section class="section" id="v-termine" hidden></section>
+  <section class="section" id="v-kasse" hidden></section>
+  <section class="section" id="v-leute" hidden></section>
+  <section class="section" id="v-statistik" hidden></section>
+  <section class="section" id="v-chronik" hidden></section>
+</div>
+<div class="toast" id="toast" hidden></div>
+<div class="lightbox" id="lightbox" hidden data-act="closeLb"><img alt="Foto"><button class="btn">Schließen</button></div>
+<div class="gate" id="gate" hidden>
+  <form class="card pad stack" data-form="gate" style="max-width:360px;width:100%">
+    <div class="gate-icon" aria-hidden="true"><span>16</span></div>
+    <h1>Stammtisch</h1>
+    <div class="note">Gib den PIN ein, den du vom Kassier bekommen hast. Das ist nur einmal pro Gerät nötig.</div>
+    <input type="password" id="gatePin" autocomplete="off" autocapitalize="off" placeholder="PIN" required>
+    <button class="btn primary" id="gateBtn">Weiter</button>
+    <div class="note" id="gateMsg"></div>
+  </form>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const MONATE=["Jänner","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+const eur=n=>(Math.round((+n||0)*100)/100).toLocaleString("de-AT",{style:"currency",currency:"EUR"});
+const eurP=n=>(Math.round((+n||0)*100)/100).toLocaleString("de-AT",{minimumFractionDigits:2,maximumFractionDigits:2})+" EUR";
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad=n=>String(n).padStart(2,"0");
+const fmtD=iso=>{if(!iso)return"";const[y,m,d]=iso.split("-");return`${+d}.${+m}.${y.slice(2)}`};
+const fmtDL=iso=>{if(!iso)return"";const d=new Date(iso+"T12:00");return d.toLocaleDateString("de-AT",{weekday:"short",day:"numeric",month:"long"})};
+const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today=new Date();const todayISO=iso(today);
+const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const mkey=(y,m)=>`${y}-${pad(m+1)}`;
+const keyAdd=(k,n)=>{const d=new Date(+k.slice(0,4),+k.slice(5)-1+n,1);return mkey(d.getFullYear(),d.getMonth())};
+const keyName=k=>`${MONATE[+k.slice(5)-1]} ${k.slice(0,4)}`;
+const first=n=>String(n||"").replace(/^Beispiel:\s*/,"").split(" ")[0];
+
+let S={members:{},meetings:{},tx:{},payments:{},events:{},polls:{},decisions:{},people:{},settings:{beitrag:10,strafe:10}};
+let view={y:today.getFullYear(),m:today.getMonth(),tab:"abend",year:today.getFullYear(),asMember:false,payFor:null,editMem:null,ledgerFilter:"all"};
+let role={kassier:false,me:null,assets:null,downloads:null,demo:false};
+const K=()=>role.kassier&&!view.asMember;
+let store={set(){toast("Lädt noch, bitte gleich nochmal.")},del(){toast("Lädt noch, bitte gleich nochmal.")}};
+
+function toast(msg){const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,3400)}
+async function copy(text){try{await navigator.clipboard.writeText(text);toast("Kopiert")}catch{toast("Kopieren nicht möglich. Bitte Text markieren.")}}
+function confirmBtn(b,fn){if(b.dataset.confirm){fn();return}b.dataset.confirm="1";const t=b.textContent;b.textContent="Wirklich?";setTimeout(()=>{if(b.isConnected){delete b.dataset.confirm;b.textContent=t}},4000)}
+const blobCache={},blobPending={};const PH="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+const isInline=id=>/^(data:|blob:)/.test(String(id));
+const imgSrc=id=>isInline(id)?id:(blobCache[id]||PH);
+let fb=null;
+const lsGet=k=>{try{return localStorage.getItem(k)}catch{return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch{}};
+function loadBlob(id){if(isInline(id))return Promise.resolve(id);if(blobCache[id])return Promise.resolve(blobCache[id]);if(!fb)return Promise.resolve(null);
+  return blobPending[id]=blobPending[id]||fb.F.getDoc(fb.F.doc(fb.db,"blobs",id)).then(d=>d.exists()?(blobCache[id]=d.data().data):null).catch(()=>null)}
+function hydrateImgs(){document.querySelectorAll("img[data-blob]").forEach(img=>{if(img.getAttribute("src")!==PH)return;loadBlob(img.dataset.blob).then(d=>{if(d&&img.isConnected)img.src=d})})}
+
+/* ---------- Speicher ---------- */
+const COLLS=["members","meetings","tx","payments","events","polls","decisions","people","config"];
+const lastSnap={};
+function applySnap(c,o){lastSnap[c]=o;if(c==="config"){if(o.settings)S.settings={beitrag:10,strafe:10,...o.settings}}else S[c]=c==="meetings"?normMeetings(o):o}
+function restore(c){if(lastSnap[c]){applySnap(c,lastSnap[c]);render()}}
+function memStore(seed){
+  const data={};COLLS.forEach(c=>data[c]={});Object.assign(data,JSON.parse(JSON.stringify(seed)));const subs={};
+  const emit=c=>(subs[c]||[]).forEach(f=>f({...data[c]}));
+  return{watch(c,cb){(subs[c]=subs[c]||[]).push(cb);cb({...data[c]})},
+    async set(c,id,v){data[c][id]=JSON.parse(JSON.stringify(v));emit(c)},
+    async del(c,id){delete data[c][id];emit(c)}};
+}
+function fbStore(db,F){
+  const chains={};let timer=setTimeout(()=>{$("#loadNote").hidden=false},10000);
+  return{
+    watch(c,cb){F.onSnapshot(F.collection(db,c),snap=>{clearTimeout(timer);$("#loadNote").hidden=true;
+        const o={};snap.docs.forEach(d=>o[d.id]=d.data());cb(o)},
+      e=>{clearTimeout(timer);toast(e.code==="permission-denied"?"Kein Zugriff. Bitte PIN neu eingeben.":"Daten konnten nicht geladen werden ("+e.code+").");if(e.code==="permission-denied"){lsSet("stt-access","");showGate()}})},
+    set(c,id,v){const k=c+"/"+id;const body=JSON.parse(JSON.stringify(v));
+      return chains[k]=(chains[k]||Promise.resolve()).then(()=>F.setDoc(F.doc(db,c,id),body)).catch(e=>{writeErr(e);restore(c)})},
+    del(c,id){const k=c+"/"+id;return chains[k]=(chains[k]||Promise.resolve()).then(()=>F.deleteDoc(F.doc(db,c,id))).catch(e=>{writeErr(e);restore(c)})}
+  };
+}
+function writeErr(e){
+  if(e&&(e.code==="permission-denied"||e.code==="invalid_argument"))toast("Dafür fehlen dir die Rechte. Nur der Kassier kann das ändern (Leute → Kassier-PIN).");
+  else if(e&&(e.code==="quota_exceeded"||e.code==="resource-exhausted"))toast("Speicher voll. Bitte alte Einträge löschen.");
+  else toast("Speichern fehlgeschlagen. Bitte nochmal versuchen.");
+}
+
+/* ---------- Beispieldaten für die Vorschau ---------- */
+function demoSeed(){
+  const y=today.getFullYear();
+  const P=[["Franz","0664 1234567","1968-11-03"],["Sepp","0676 2345678","1972-04-21"],["Gerti","0650 3456789","1980-11-28"],["Hannes","0699 4567890","1975-08-09"],["Toni","","1990-01-15"]];
+  const members={};P.forEach(([n,ph,b],i)=>members["m"+i]={name:"Beispiel: "+n,active:true,phone:ph,birthday:b,email:"",address:""});
+  const meetings={};
+  for(let m=0;m<today.getMonth();m++){const k=mkey(y,m);const entries={};
+    P.forEach((_,i)=>{const r=(i*3+m)%7;const s=r<=1?"x":"a";entries["m"+i]={s,paid:!(i===3&&m>=today.getMonth()-3)&&i!==4}});
+    meetings[k]={date:`${k}-16`,beitrag:10,strafe:10,excusedPays:true,entries,guests:m===5?["Beispiel: Schwager vom Franz"]:[],rounds:[`m${m%5}`],note:m===2?"Beispiel: Ausflug auf die Rax besprochen, Termin im Juni.":"",photos:[],rsvp:{}};}
+  const nk=mkey(y,today.getMonth());
+  meetings[nk]={date:`${nk}-16`,beitrag:10,strafe:10,excusedPays:true,entries:{},guests:[],rounds:[],note:"",photos:[],rsvp:{m1:{a:"no",at:`${nk}-08T10:00`},m2:{a:"yes",at:`${nk}-09T10:00`}}};
+  return{members,meetings,
+    tx:{t1:{date:`${y}-03-02`,kind:"out",amount:45,text:"Beispiel: Stammtisch-Schild"},t2:{date:`${y}-06-20`,kind:"out",amount:120,text:"Beispiel: Freibier Ausflug",eventId:"e1"},t3:{date:`${y}-06-20`,kind:"in",amount:60,text:"Beispiel: Fahrtkosten-Anteil",eventId:"e1"}},
+    payments:{p1:{memberId:"m4",date:`${y}-02-10`,amount:100,note:"Vorauszahlung"}},
+    events:{e1:{title:"Beispiel: Ausflug Rax",date:`${y}-06-20`,place:"Reichenau",note:""},e2:{title:"Beispiel: Weihnachtsfeier",date:`${y}-12-19`,place:"Gasthaus",note:"Mit Partnerinnen und Partnern"}},
+    polls:{q1:{question:"Beispiel: Wohin geht der Ausflug 2027?",options:["Wachau","Neusiedler See","Salzkammergut"],closed:false,created:`${y}-10-01`}},
+    decisions:{d1:{date:`${y}-03-16`,text:"Beispiel: Ab 2027 bleibt der Beitrag bei 10 €."}},
+    people:{demo:{memberId:"m0",rsvp:{},votes:{q1:0}}},
+    config:{settings:{beitrag:10,strafe:10,excusedPays:true,frist:2}}};
+}
+
+/* ---------- Berechnungen ---------- */
+function getMeeting(k){
+  return S.meetings[k]||{date:`${k}-16`,beitrag:S.settings.beitrag,strafe:S.settings.strafe,excusedPays:S.settings.excusedPays!==false,entries:{},guests:[],rounds:[],note:"",photos:[],rsvp:{},_new:true};
+}
+const due=(mt,e)=>{if(!e||mt.cancelled)return 0;const b=mt.beitrag??10;
+  return e.s==="a"?b:e.s==="x"?b+(mt.strafe??10):0};
+const normMeetings=o=>{const r={};for(const[k,mt]of Object.entries(o||{})){const en={};let ch=false;for(const[id,e]of Object.entries(mt.entries||{})){if(e&&e.s==="e"){en[id]={...e,s:"x",paid:false};ch=true}else en[id]=e}r[k]=ch?{...mt,entries:en}:mt}return r};
+const sortedMembers=all=>Object.entries(S.members).filter(([,m])=>all||m.active!==false).sort((a,b)=>a[1].name.localeCompare(b[1].name,"de"));
+const mName=id=>S.members[id]?.name||"Unbekannt";
+const heldMeetings=()=>Object.entries(S.meetings).filter(([,mt])=>!mt.cancelled&&Object.values(mt.entries||{}).some(e=>e.s)).sort((a,b)=>a[1].date.localeCompare(b[1].date));
+
+function ledger(){
+  const per={};const P=id=>per[id]=per[id]||{owed:0,credit:0,unpaid:[],cov:new Set(),part:{},balance:0};
+  for(const[k,mt]of Object.entries(S.meetings)){if(mt.cancelled)continue;
+    for(const[id,e]of Object.entries(mt.entries||{})){const d=due(mt,e);if(!d||e.paid)continue;const p=P(id);p.owed+=d;p.unpaid.push({k,d,date:mt.date})}}
+  for(const p of Object.values(S.payments))P(p.memberId).credit+=+p.amount;
+  for(const p of Object.values(per)){p.unpaid.sort((a,b)=>a.date.localeCompare(b.date));let pool=p.credit;
+    for(const u of p.unpaid){if(pool<=1e-9)break;const use=Math.min(pool,u.d);if(use+1e-9>=u.d)p.cov.add(u.k);else p.part[u.k]=use;pool-=use}
+    p.balance=p.credit-p.owed}
+  return per;
+}
+function meetingTotals(k,mt,L){
+  let a=0,e=0,x=0,paid=0,open=0;
+  for(const[id,en]of Object.entries(mt.entries||{})){if(en.s==="a")a++;if(en.s==="e")e++;if(en.s==="x")x++;
+    const d=due(mt,en);if(en.paid)paid+=d;else if(!(L[id]&&L[id].cov.has(k)))open+=d-(L[id]?.part[k]||0)}
+  return{a,e,x,paid,open};
+}
+function finance(yearFilter){
+  const inY=d=>!yearFilter||String(d).startsWith(yearFilter);
+  let beitr=0,zahl=0,inn=0,out=0;
+  for(const mt of Object.values(S.meetings)){if(mt.cancelled||!inY(mt.date))continue;for(const e of Object.values(mt.entries||{}))if(e.paid)beitr+=due(mt,e)}
+  for(const p of Object.values(S.payments))if(inY(p.date))zahl+=+p.amount;
+  for(const t of Object.values(S.tx))if(inY(t.date)){if(t.kind==="in")inn+=+t.amount;else out+=+t.amount}
+  return{beitr,zahl,inn,out,stand:beitr+zahl+inn-out};
+}
+function balanceBefore(dateISO){let s=0;
+  for(const mt of Object.values(S.meetings)){if(mt.cancelled||mt.date>=dateISO)continue;for(const e of Object.values(mt.entries||{}))if(e.paid)s+=due(mt,e)}
+  for(const p of Object.values(S.payments))if(p.date<dateISO)s+=+p.amount;
+  for(const t of Object.values(S.tx))if(t.date<dateISO)s+=t.kind==="in"?+t.amount:-t.amount;return s}
+function rsvpMap(k){
+  const mt=S.meetings[k]||{};const out={...(mt.rsvp||{})};
+  for(const p of Object.values(S.people)){const r=p.rsvp&&p.rsvp[k];if(!p.memberId||!r)continue;if(!out[p.memberId]||(r.at||"")>(out[p.memberId].at||""))out[p.memberId]=r}
+  return out;
+}
+function deadline(mt){return mt.date}
+const myPerson=()=>role.me?S.people[role.me]||{}:null;
+const myMember=()=>myPerson()?.memberId||null;
+function nextMeetingKey(){let k=mkey(today.getFullYear(),today.getMonth());
+  for(let i=0;i<14;i++){const mt=getMeeting(k);if(!mt.cancelled&&mt.date>=todayISO)return k;k=keyAdd(k,1)}return null}
+function nextBirthday(m){if(!m.birthday)return null;const md=m.birthday.slice(5);let d=`${today.getFullYear()}-${md}`;if(d<todayISO)d=`${today.getFullYear()+1}-${md}`;
+  return{date:d,age:+d.slice(0,4)-+m.birthday.slice(0,4)}}
+function waNumber(ph){let n=String(ph||"").replace(/[^\d+]/g,"");if(n.startsWith("+"))n=n.slice(1);else if(n.startsWith("00"))n=n.slice(2);else if(n.startsWith("0"))n="43"+n.slice(1);return n}
+
+/* ---------- Erhalten von Eingaben beim Neuzeichnen ---------- */
+function keep(fn){const saved={};document.querySelectorAll("[data-keep]").forEach(el=>{if(el.id)saved[el.id]=el.type==="checkbox"?el.checked:el.value});
+  const f=document.activeElement&&document.activeElement.id;fn();
+  for(const id in saved){const el=document.getElementById(id);if(!el)continue;if(el.type==="checkbox")el.checked=saved[id];else if(el.type!=="file")el.value=saved[id]}
+  if(f){const el=document.getElementById(f);if(el&&el!==document.activeElement)el.focus()}}
+
+/* ---------- Abend ---------- */
+const curKey=()=>mkey(view.y,view.m);
+function saveMeeting(k,patch){const mt={...getMeeting(k),...patch};delete mt._new;S.meetings[k]=mt;render();store.set("meetings",k,mt)}
+
+function renderAbend(){
+  const k=curKey(),mt=getMeeting(k),L=ledger(),R=rsvpMap(k);
+  $("#monthTitle").textContent=keyName(k);
+  const moved=mt.date.slice(8)!=="16";
+  $("#dateCtl").innerHTML=K()
+    ?`<label class="row note">Datum <input type="date" id="mDate" data-chg="mDate" value="${mt.date}"></label>
+      <button class="btn small ${mt.cancelled?"":"danger"}" data-act="cancelToggle">${mt.cancelled?"Wieder ansetzen":"Absagen"}</button>
+      ${mt.cancelled?waBtn(`Der Stammtisch am ${fmtDL(mt.date)} fällt aus.`,"Absage teilen"):moved?waBtn(`Achtung: Der Stammtisch im ${MONATE[view.m]} ist verlegt auf ${fmtDL(mt.date)}.`,"Verlegung teilen"):""}`
+    :`<span class="note">${fmtDL(mt.date)}</span>`;
+  const ids=new Set(sortedMembers(false).map(([id])=>id));Object.keys(mt.entries||{}).forEach(id=>{if(S.members[id])ids.add(id)});
+  const rows=[...ids].map(id=>[id,S.members[id]]).sort((a,b)=>a[1].name.localeCompare(b[1].name,"de"));
+  const t=meetingTotals(k,mt,L);const dl=deadline(mt);
+  let h="";
+  if(mt.cancelled)h+=`<div class="banner">Dieser Stammtisch ist abgesagt. Es fallen keine Beiträge oder Strafen an.</div>`;
+  else if(moved)h+=`<div class="banner info">Verlegt auf ${fmtDL(mt.date)}.</div>`;
+  const yes=Object.values(R).filter(r=>r.a==="yes").length,no=Object.values(R).filter(r=>r.a==="no").length;
+  h+=`<div class="stats">
+    <div class="card stat"><div class="lbl">Anwesend</div><div class="val num">${t.a}<span class="note"> / ${rows.length}</span></div></div>
+    <div class="card stat"><div class="lbl">Nicht da</div><div class="val num ${t.x?"bad":""}">${t.x}</div></div>
+    <div class="card stat"><div class="lbl">Kassiert</div><div class="val num good">${eur(t.paid)}</div></div>
+    <div class="card stat"><div class="lbl">Noch offen</div><div class="val num ${t.open?"bad":""}">${eur(t.open)}</div></div></div>`;
+  if(yes||no)h+=`<div class="note">Rückmeldungen vorab: ${yes} Zusagen, ${no} Absagen.</div>`;
+  if(K()&&!mt.cancelled)h+=`<div class="row">
+    <button class="btn small" data-act="allA">Rest anwesend</button>
+    <button class="btn small" data-act="takeRsvp">Absagen als „nicht da“ eintragen</button>
+    <button class="btn small" data-act="allPaid">Alle bezahlt</button></div>`;
+  if(!rows.length)h+=`<div class="card empty">Noch keine Mitglieder. Leg sie unter <b>Leute</b> an, dann kannst du hier die Anwesenheit abhaken.</div>`;
+  else if(!mt.cancelled){
+    h+=`<div class="card"><ul class="list">${rows.map(([id,m])=>{
+      const e=(mt.entries||{})[id]||{};const d=due(mt,e);const r=R[id];const b=L[id]?.balance||0;
+      const hints=[];
+      if(r)hints.push(r.a==="yes"?`<span class="chip good">hat zugesagt</span>`:`<span class="chip warn">hat abgesagt</span>`);
+      if(m.birthday&&m.birthday.slice(5,7)===k.slice(5))hints.push(`<span class="chip warn">Geburtstag ${+m.birthday.slice(8)}.${+m.birthday.slice(5,7)}.</span>`);
+      if(b<-0.005)hints.push(`<span class="chip bad">Rückstand ${eur(-b)}</span>`);else if(b>0.005)hints.push(`<span class="chip info">Guthaben ${eur(b)}</span>`);
+      if(m.active===false)hints.push(`<span class="chip">archiviert</span>`);
+      const pt=L[id]?.part[k]||0;
+      const st=e.paid?["paid","bezahlt"]:(e.s&&L[id]?.cov.has(k))?["cov","über Zahlung"]:e.s&&d?["open",pt?`Rest ${eur(d-pt)}`:"offen"]:["","–"];
+      const segs=[["a","Da"],["x","Nicht da"]].map(([s,l])=>`<button data-act="seg" data-mid="${id}" data-s="${s}" class="${e.s===s?"on-"+s:""}" aria-pressed="${e.s===s}" ${K()?"":"disabled"}>${l}</button>`).join("");
+      return`<li class="att"><div><div class="name">${esc(m.name)}</div>${hints.length?`<div class="hints">${hints.join("")}</div>`:""}</div>
+        <span class="seg" role="group" aria-label="Anwesenheit ${esc(m.name)}">${segs}</span>
+        <span class="due num">${e.s?eur(d):"–"}${e.s==="x"?"<small>inkl. Strafe</small>":""}</span>
+        ${K()?`<button class="pill ${st[0]}" data-act="pay" data-mid="${id}" ${e.s&&d&&st[0]!=="cov"?"":"disabled"}>${st[1]}</button>`:`<span class="pill ${st[0]}">${st[1]}</span>`}</li>`}).join("")}</ul></div>
+      <div class="note">Beitrag ${eur(mt.beitrag??10)} pro Abend · wer nicht da ist, zahlt zusätzlich ${eur(mt.strafe??10)} Strafe.</div>`;
+    const present=rows.filter(([id])=>(mt.entries||{})[id]?.s==="a");
+    h+=`<div class="grid2">
+      <div class="card pad stack"><h3>Gäste</h3>
+        ${(mt.guests||[]).length?`<div class="row">${mt.guests.map((g,i)=>`<span class="chip">${esc(g)}${K()?`<button data-act="guestDel" data-i="${i}" aria-label="Entfernen">×</button>`:""}</span>`).join("")}</div>`:`<div class="note">Keine Gäste eingetragen.</div>`}
+        ${K()?`<form class="inline" data-form="guest"><input type="text" id="guestName" data-keep placeholder="Name des Gasts" required><button class="btn small">Dazu</button></form>`:""}
+      </div>
+      <div class="card pad stack"><h3>Wer zahlt die Runde?</h3>
+        ${(mt.rounds||[]).length?`<div class="row">${mt.rounds.map((id,i)=>`<span class="chip warn">${esc(mName(id))}${K()?`<button data-act="roundDel" data-i="${i}" aria-label="Entfernen">×</button>`:""}</span>`).join("")}</div>`:`<div class="note">Heute noch keine Runde.</div>`}
+        ${K()?`<form class="inline" data-form="round"><select id="roundMem" data-keep>${(present.length?present:rows).map(([id,m])=>`<option value="${id}">${esc(m.name)}</option>`).join("")}</select>
+          <button class="btn small">Eintragen</button><button class="btn small" type="button" data-act="roundRandom">Los entscheiden</button></form>
+          <div class="note">Das Los zieht unter den Anwesenden, wer heuer am seltensten gezahlt hat.</div>`:""}
+      </div></div>`;
+  }
+  h+=`<div class="card pad stack"><h3>Protokoll</h3>
+    ${K()?`<textarea id="meNote" data-chg="meNote" placeholder="Was wurde besprochen, was ist ausgemacht?">${esc(mt.note||"")}</textarea><div class="note">Wird beim Verlassen des Felds gespeichert. Beschlüsse trägst du in der Chronik ein.</div>`
+      :mt.note?`<div style="white-space:pre-wrap">${esc(mt.note)}</div>`:`<div class="note">Kein Protokoll.</div>`}</div>`;
+  h+=`<div class="card pad stack"><div class="row spread"><h3>Fotos</h3>
+    ${K()&&(role.assets||role.demo)?`<label class="btn small">Fotos hinzufügen<input type="file" accept="image/*" multiple data-chg="photosUp" hidden></label>`:""}</div>
+    ${(mt.photos||[]).length?`<div class="photos">${mt.photos.map(p=>`<figure><a href="#" data-act="viewImg" data-id="${esc(p)}"><img src="${imgSrc(p)}" data-blob="${esc(p)}" alt="Foto vom Stammtisch" loading="lazy"></a>${K()?`<button data-act="photoDel" data-id="${esc(p)}">Entfernen</button>`:""}</figure>`).join("")}</div>`:`<div class="note">Noch keine Fotos von diesem Abend.</div>`}</div>`;
+  keep(()=>$("#abendBody").innerHTML=h);
+}
+
+/* ---------- Termine ---------- */
+/* ---------- WhatsApp-Teilen & Neu-Hinweise ---------- */
+const appLink=()=>{const c=window.FIREBASE_CONFIG;return c&&c.apiKey&&!/HIER/.test(c.apiKey)&&/^https?:$/.test(location.protocol)?location.origin+location.pathname:""};
+const waBtn=(t,label="In WhatsApp teilen")=>`<a class="btn small" href="https://wa.me/?text=${encodeURIComponent(t+(appLink()?"\n"+appLink():""))}" target="_blank" rel="noopener">${label}</a>`;
+const lsGetS=k=>{try{return localStorage.getItem(k)}catch{return null}};
+const lsSetS=(k,v)=>{try{localStorage.setItem(k,v)}catch{}};
+const sinceTs=(()=>{let v=+lsGetS("stt-since");if(!v){v=Date.now();lsSetS("stt-since",String(v))}return v})();
+let seenAt=+lsGetS("stt-seen")||sinceTs;
+const ts=x=>typeof x==="number"?x:(Date.parse(x||"")||0);
+const isNewItem=o=>ts(o.created)>Math.max(sinceTs,view.seenSnap??seenAt);
+function todo(){const me=myMember(),r={polls:0,events:0,rsvp:0},since=Math.max(sinceTs,seenAt);
+  if(me){const v=myPerson()?.votes||{};r.polls=Object.entries(S.polls).filter(([pid,p])=>!p.closed&&v[pid]==null).length;
+    const k=nextMeetingKey();if(k){const mt=getMeeting(k);if(!mt.cancelled&&!rsvpMap(k)[me]&&todayISO<=deadline(mt))r.rsvp=1}}
+  else r.polls=Object.values(S.polls).filter(p=>!p.closed&&ts(p.created)>since).length;
+  r.events=Object.values(S.events).filter(e=>e.date>=todayISO&&ts(e.created)>since).length;
+  return r}
+function updateBadges(){const t=todo(),n=t.polls+t.events+t.rsvp,b=document.querySelector('#tabs button[data-tab="termine"]');
+  if(b){let d=b.querySelector(".dot");if(n&&view.tab!=="termine"){if(!d){d=document.createElement("span");d.className="dot";b.appendChild(d)}d.textContent=n;b.setAttribute("aria-label",`Termine, ${n} offen`)}
+    else{if(d)d.remove();b.removeAttribute("aria-label")}}
+  try{if(navigator.setAppBadge)n?navigator.setAppBadge(n):navigator.clearAppBadge()}catch{}}
+function pollResultText(p){const counts=p.options.map(()=>0);for(const pe of Object.values(S.people)){const v=pe.votes?.[Object.keys(S.polls).find(k=>S.polls[k]===p)];if(v!=null&&counts[v]!=null)counts[v]++}
+  return`Ergebnis der Stammtisch-Umfrage „${p.question}“:\n`+p.options.map((o,i)=>`${o}: ${counts[i]} ${counts[i]===1?"Stimme":"Stimmen"}`).join("\n")}
+
+function renderTermine(){
+  const me=myMember();let h="";
+  if(role.me){
+    h+=`<div class="card pad row spread"><label class="row">Ich bin <select data-chg="meSelect" id="meSel"><option value="">– bitte wählen –</option>${sortedMembers(false).map(([id,m])=>`<option value="${id}" ${id===me?"selected":""}>${esc(m.name)}</option>`).join("")}</select></label>
+      <span class="note">Damit kannst du selbst zu- oder absagen und abstimmen.</span></div>`;
+  }
+  // Stammtische
+  let k=nextMeetingKey()||curKey();const keys=[];for(let i=0;i<4;i++){keys.push(k);k=keyAdd(k,1)}
+  h+=`<h2>Nächste Stammtische</h2><div class="card"><ul class="list">${keys.map(k=>{
+    const mt=getMeeting(k),R=rsvpMap(k),dl=deadline(mt);
+    const ys=Object.entries(R).filter(([,r])=>r.a==="yes").map(([id])=>first(mName(id)));
+    const ns=Object.entries(R).filter(([,r])=>r.a==="no").map(([id])=>first(mName(id)));
+    const mine=me&&R[me]?.a;
+    return`<li class="meet"><div class="row spread"><div><b>${fmtDL(mt.date)}</b>
+        ${mt.cancelled?` <span class="chip bad">abgesagt</span>`:mt.date.slice(8)!=="16"?` <span class="chip info">verlegt</span>`:""}
+        ${me&&k===nextMeetingKey()&&!mt.cancelled&&!R[me]&&todayISO<=dl?` <span class="chip warn">Noch nicht zu- oder abgesagt</span>`:""}</div>
+        ${!mt.cancelled&&me?`<span class="seg"><button data-act="rsvp" data-k="${k}" data-a="yes" class="${mine==="yes"?"on-y":""}">Komme</button><button data-act="rsvp" data-k="${k}" data-a="no" class="${mine==="no"?"on-n":""}">Komme nicht</button></span>`:""}</div>
+      ${mt.cancelled?"":`<div class="note">Zusagen (${ys.length}): ${ys.map(esc).join(", ")||"–"} · Absagen (${ns.length}): ${ns.map(esc).join(", ")||"–"}</div>`}
+      ${K()&&!mt.cancelled?`<div class="row"><select id="rsf-${k}" data-keep aria-label="Mitglied">${sortedMembers(false).map(([id,m])=>`<option value="${id}">${esc(m.name)}</option>`).join("")}</select>
+        <button class="btn small" data-act="rsvpFor" data-k="${k}" data-a="yes">sagt zu</button><button class="btn small" data-act="rsvpFor" data-k="${k}" data-a="no">sagt ab</button>
+        ${waBtn(`Erinnerung Stammtisch: ${fmtDL(mt.date)}${mt.date.slice(8)!=="16"?" (verlegt!)":""}. Bitte in der App zu- oder absagen.`,"Erinnerung teilen")}</div>`:""}
+      ${K()&&mt.cancelled?`<div class="row">${waBtn(`Der Stammtisch am ${fmtDL(mt.date)} fällt aus.`,"Absage teilen")}</div>`:""}
+    </li>`}).join("")}</ul></div>`;
+  if(K())h+=`<div class="note">Verlegen oder absagen kannst du im Tab <b>Abend</b>, indem du zum jeweiligen Monat blätterst.</div>`;
+  // Events
+  const evs=Object.entries(S.events).sort((a,b)=>a[1].date.localeCompare(b[1].date));
+  const up=evs.filter(([,e])=>e.date>=todayISO),past=evs.filter(([,e])=>e.date<todayISO).reverse();
+  const evRow=([id,e])=>{let s=0;for(const t of Object.values(S.tx))if(t.eventId===id)s+=t.kind==="in"?+t.amount:-t.amount;
+    return`<li><div class="row spread"><div><b>${esc(e.title)}</b>${e.date>=todayISO&&isNewItem(e)?` <span class="chip new">Neu</span>`:""} <span class="note">${fmtDL(e.date)}${e.place?" · "+esc(e.place):""}</span></div>
+      <div class="row">${s?`<span class="chip ${s<0?"bad":"good"}">Kassa ${eur(s)}</span>`:""}${K()&&e.date>=todayISO?waBtn(`Stammtisch-Termin: ${e.title} am ${fmtDL(e.date)}${e.place?", "+e.place:""}.${e.note?" "+e.note:""}`,"Teilen"):""}${K()?`<button class="btn small danger" data-act="eventDel" data-id="${id}">Löschen</button>`:""}</div></div>
+      ${e.note?`<div class="note">${esc(e.note)}</div>`:""}</li>`};
+  h+=`<h2>Veranstaltungen</h2>`;
+  if(K())h+=`<div class="card pad"><form class="inline" data-form="event"><input type="text" id="evTitle" data-keep placeholder="z. B. Weihnachtsfeier" required>
+    <input type="date" id="evDate" data-keep required><input type="text" id="evPlace" data-keep placeholder="Ort" style="flex:0 1 140px"><input type="text" id="evNote" data-keep placeholder="Notiz (optional)">
+    <button class="btn primary">Anlegen</button></form></div>`;
+  h+=`<div class="card"><ul class="list">${up.length?up.map(evRow).join(""):`<li class="empty">Keine geplanten Veranstaltungen.</li>`}${past.length?`<li class="note" style="background:var(--sunk)">Vergangen</li>`+past.slice(0,5).map(evRow).join(""):""}</ul></div>
+    <div class="note">Ausgaben und Einnahmen einer Veranstaltung buchst du in der Kasse und ordnest sie dort zu.</div>`;
+  // Abstimmungen
+  const polls=Object.entries(S.polls).sort((a,b)=>(b[1].created||"").localeCompare(a[1].created||""));
+  h+=`<h2>Abstimmungen</h2>`;
+  if(K())h+=`<div class="card pad"><form class="stack" data-form="poll"><input type="text" id="pollQ" data-keep placeholder="Frage, z. B. Welches Lokal 2027?" required>
+    <input type="text" id="pollO" data-keep placeholder="Antworten, mit Komma getrennt: Krone, Post, Hirsch" required><div><button class="btn primary">Abstimmung starten</button></div></form></div>`;
+  const myVotes=myPerson()?.votes||{};
+  h+=polls.length?polls.map(([pid,p])=>{
+    const counts=p.options.map(()=>0);const voters=p.options.map(()=>[]);
+    for(const pe of Object.values(S.people)){const v=pe.votes?.[pid];if(v!=null&&counts[v]!=null){counts[v]++;if(pe.memberId)voters[v].push(first(mName(pe.memberId)))}}
+    const tot=counts.reduce((a,b)=>a+b,0);const canVote=me&&!p.closed;
+    return`<div class="card pad stack"><div class="row spread"><b>${esc(p.question)}</b><span class="row">${!p.closed&&isNewItem(p)?`<span class="chip new">Neu</span>`:""}${canVote&&myVotes[pid]==null?`<span class="chip warn">Noch nicht abgestimmt</span>`:""}${p.closed?`<span class="chip">beendet</span>`:""}</span></div>
+      ${p.options.map((o,i)=>`<div class="poll-opt"><div>${canVote?`<button class="btn small ${myVotes[pid]===i?"mine":""}" data-act="vote" data-p="${pid}" data-i="${i}">${esc(o)}</button>`:`<span>${esc(o)}</span>`}
+        <span class="note">${voters[i].map(esc).join(", ")}</span></div><span class="num note">${counts[i]} ${counts[i]===1?"Stimme":"Stimmen"}</span>
+        <div class="bar"><span style="width:${tot?counts[i]/tot*100:0}%"></span></div></div>`).join("")}
+      ${!me&&!p.closed?`<div class="note">${role.me?"Wähl oben aus, wer du bist, um abzustimmen.":"Zum Abstimmen brauchst du einen Zugang mit Mitwirkungsrechten."}</div>`:""}
+      ${K()?`<div class="row">${p.closed?waBtn(pollResultText(p),"Ergebnis teilen"):waBtn(`Neue Umfrage beim Stammtisch: ${p.question}\nAntworten: ${p.options.join(", ")}\nBitte in der App abstimmen.`)}<button class="btn small" data-act="pollClose" data-p="${pid}">${p.closed?"Wieder öffnen":"Beenden"}</button><button class="btn small danger" data-act="pollDel" data-p="${pid}">Löschen</button></div>`:""}</div>`}).join("")
+    :`<div class="card empty">Keine Abstimmungen.</div>`;
+  // Geburtstage
+  const bd=sortedMembers(false).map(([id,m])=>[m,nextBirthday(m)]).filter(x=>x[1]).sort((a,b)=>a[1].date.localeCompare(b[1].date)).slice(0,6);
+  h+=`<h2>Geburtstage</h2><div class="card"><ul class="list">${bd.length?bd.map(([m,b])=>`<li class="row spread"><span><b>${esc(m.name)}</b> wird ${b.age}</span><span class="note">${fmtDL(b.date)}</span></li>`).join("")
+    :`<li class="empty">Keine Geburtstage hinterlegt. Trag sie unter <b>Leute</b> ein.</li>`}</ul></div>`;
+  keep(()=>$("#v-termine").innerHTML=h);
+}
+
+/* ---------- Kasse ---------- */
+function renderKasse(){
+  const f=finance(),L=ledger();let h=`<h2>Kasse</h2>`;
+  const out=Object.values(L).reduce((s,p)=>s+Math.max(0,-p.balance),0);
+  h+=`<div class="stats">
+    <div class="card stat"><div class="lbl">Kassastand</div><div class="val num ${f.stand<0?"bad":""}">${eur(f.stand)}</div></div>
+    <div class="card stat"><div class="lbl">Beiträge am Abend</div><div class="val num good">${eur(f.beitr)}</div></div>
+    <div class="card stat"><div class="lbl">Zahlungen</div><div class="val num good">${eur(f.zahl)}</div></div>
+    <div class="card stat"><div class="lbl">Sonst. Einnahmen</div><div class="val num good">${eur(f.inn)}</div></div>
+    <div class="card stat"><div class="lbl">Ausgaben</div><div class="val num bad">${eur(f.out)}</div></div>
+    <div class="card stat"><div class="lbl">Ausstehend</div><div class="val num ${out?"bad":""}">${eur(out)}</div></div></div>`;
+  // Schuldenliste
+  const debt=sortedMembers(true).map(([id,m])=>[id,m,L[id]?.balance||0]).filter(([id,m,b])=>Math.abs(b)>0.005||(m.active!==false&&view.payFor===id)).sort((a,b)=>a[2]-b[2]);
+  h+=`<div class="card"><div class="pad row spread" style="padding-bottom:4px"><h3>Offene Beträge und Guthaben</h3>
+    ${K()?`<select data-chg="payPick" id="payPick" aria-label="Zahlung für Mitglied"><option value="">+ Zahlung erfassen für …</option>${sortedMembers(false).map(([id,m])=>`<option value="${id}">${esc(m.name)}</option>`).join("")}</select>`:""}</div>
+    <ul class="list">${debt.length?debt.map(([id,m,b])=>{
+      const msg=`Servus ${first(m.name)}, laut Stammtisch-Kassa hast du noch ${eur(-b)} offen. Danke!`;
+      return`<li class="stack"><div class="row spread"><span class="name">${esc(m.name)}</span>
+        <span class="row">${b<-0.005?`<span class="chip bad num">offen ${eur(-b)}</span>`:b>0.005?`<span class="chip info num">Guthaben ${eur(b)}</span>`:`<span class="chip">ausgeglichen</span>`}
+        ${K()?`<button class="btn small" data-act="payFor" data-mid="${id}">Zahlung</button>`:""}
+        ${K()&&b<-0.005?`<a class="btn small" href="https://wa.me/${waNumber(m.phone)}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp</a><button class="btn small" data-act="copyMsg" data-mid="${id}">Text kopieren</button>`:""}</span></div>
+        ${K()&&view.payFor===id?`<form class="inline" data-form="payment" data-mid="${id}"><input type="number" id="payAmt" data-keep step="0.01" min="0.01" placeholder="Betrag €" style="width:10ch" value="${b<0?(-b).toFixed(2):""}" required>
+          <input type="date" id="payDate" data-keep value="${todayISO}"><input type="text" id="payNote" data-keep placeholder="z. B. Nachzahlung, Vorauszahlung 2027">
+          <button class="btn primary small">Buchen</button><button class="btn small" type="button" data-act="payCancel">Abbrechen</button></form>`:""}</li>`}).join("")
+      :`<li class="empty">Alle sind ausgeglichen.</li>`}</ul>
+    <div class="note pad" style="padding-top:0">Zahlungen werden automatisch mit offenen Abenden verrechnet, die ältesten zuerst; reicht eine Zahlung nicht ganz, bleibt beim Abend der Rest offen. Was übrig bleibt, ist Guthaben für die nächsten Stammtische. Ohne hinterlegte Telefonnummer wählst du den Kontakt in WhatsApp selbst.</div></div>`;
+  // Buchung
+  const evOpts=Object.entries(S.events).sort((a,b)=>b[1].date.localeCompare(a[1].date));
+  if(K())h+=`<div class="card pad stack"><h3>Buchung</h3><form class="inline" data-form="tx">
+      <select id="txKind" data-keep aria-label="Art"><option value="out">Ausgabe</option><option value="in">Einnahme</option></select>
+      <input type="date" id="txDate" data-keep value="${todayISO}" aria-label="Datum" required>
+      <input type="text" id="txText" data-keep placeholder="Wofür? z. B. Kranz, Spende, Anfangsbestand" required>
+      <input type="number" id="txAmt" data-keep placeholder="Betrag €" step="0.01" min="0.01" style="width:10ch" required>
+      <select id="txEvent" data-keep aria-label="Veranstaltung"><option value="">keine Veranstaltung</option>${evOpts.map(([id,e])=>`<option value="${id}">${esc(e.title)}</option>`).join("")}</select>
+      ${role.assets||role.demo?`<label class="btn small">Beleg-Foto<input type="file" id="txFile" accept="image/*,application/pdf" hidden data-chg="txFile"></label><span class="note" id="txFileName"></span>`:""}
+      <button class="btn primary">Buchen</button></form></div>`;
+  // Ledger
+  const items=[];
+  for(const[k,mt]of Object.entries(S.meetings)){if(mt.cancelled)continue;let s=0;for(const e of Object.values(mt.entries||{}))if(e.paid)s+=due(mt,e);
+    if(s)items.push({date:mt.date,kind:"in",amount:s,text:`Beiträge Stammtisch ${keyName(k)}`,tag:"automatisch"})}
+  for(const[id,p]of Object.entries(S.payments))items.push({date:p.date,kind:"in",amount:p.amount,text:`Zahlung ${mName(p.memberId)}${p.note?" · "+p.note:""}`,tag:"Zahlung",pid:id});
+  for(const[id,t]of Object.entries(S.tx))items.push({...t,id,tag:t.eventId&&S.events[t.eventId]?S.events[t.eventId].title:""});
+  const filt=view.ledgerFilter;const shown=items.filter(t=>filt==="all"||(filt==="ev"?t.eventId:filt===t.eventId)).sort((a,b)=>b.date.localeCompare(a.date));
+  h+=`<div class="card"><div class="pad row spread" style="padding-bottom:4px"><h3>Buchungen</h3>
+    <select data-chg="ledgerFilter" aria-label="Filter"><option value="all">Alle</option><option value="ev" ${filt==="ev"?"selected":""}>Nur Veranstaltungen</option>${evOpts.map(([id,e])=>`<option value="${id}" ${filt===id?"selected":""}>${esc(e.title)}</option>`).join("")}</select></div>
+    <ul class="list ledger">${shown.length?shown.map(t=>`<li><span class="date num">${fmtD(t.date)}</span>
+      <span><span class="name" style="font-weight:500">${esc(t.text)}</span>${t.tag?` <span class="chip ${t.tag==="automatisch"?"":"warn"}">${esc(t.tag)}</span>`:""}${t.receipt?` <a href="#" data-act="viewImg" data-id="${esc(t.receipt)}" class="note">Beleg ansehen</a>`:""}</span>
+      <span class="amt num ${t.kind}">${t.kind==="in"?"+":"−"} ${eur(t.amount)}</span>
+      <span class="del">${K()&&(t.id||t.pid)?`<button class="btn small danger" data-act="${t.id?"txDel":"paymentDel"}" data-id="${t.id||t.pid}">Löschen</button>`:""}</span></li>`).join("")
+      :`<li class="empty" style="display:block">Noch keine Buchungen. Bezahlte Beiträge erscheinen hier automatisch.</li>`}</ul></div>`;
+  // Export
+  const years=[...new Set([today.getFullYear(),...Object.values(S.meetings).map(m=>+m.date.slice(0,4)),...Object.values(S.tx).map(t=>+t.date.slice(0,4))])].sort((a,b)=>b-a);
+  h+=`<div class="card pad stack"><h3>Export</h3><div class="row"><select id="expYear" data-keep aria-label="Jahr">${years.map(y=>`<option>${y}</option>`).join("")}</select>
+    <button class="btn" data-act="exportPdf">Jahresabschluss als PDF</button><button class="btn" data-act="exportXlsx">Alles als Excel</button></div>
+    <div class="note">Für die Jahresversammlung, die Kassaprüfung oder als Sicherung bei Kassierwechsel.</div></div>`;
+  keep(()=>$("#v-kasse").innerHTML=h);
+}
+
+/* ---------- Leute ---------- */
+function renderLeute(){
+  let h=`<h2>Leute</h2>`;
+  if(K())h+=`<div class="card pad"><form class="inline" data-form="memAdd"><input type="text" id="memName" data-keep placeholder="Name des Mitglieds" required><button class="btn primary">Hinzufügen</button></form></div>`;
+  const rows=sortedMembers(true);
+  h+=`<div class="card"><ul class="list">${rows.length?rows.map(([id,m])=>{
+    if(K()&&view.editMem===id)return`<li><form class="stack" data-form="memSave" data-mid="${id}">
+      <div class="set-grid">
+        <label class="f">Name<input type="text" id="me-name" data-keep value="${esc(m.name)}" required></label>
+        <label class="f">Telefon<input type="tel" id="me-phone" data-keep value="${esc(m.phone||"")}" placeholder="0664 …"></label>
+        <label class="f">E-Mail<input type="email" id="me-email" data-keep value="${esc(m.email||"")}"></label>
+        <label class="f">Geburtstag<input type="date" id="me-bday" data-keep value="${esc(m.birthday||"")}"></label></div>
+      <label class="f">Adresse<input type="text" id="me-addr" data-keep value="${esc(m.address||"")}"></label>
+      <div class="row"><button class="btn primary small">Speichern</button><button class="btn small" type="button" data-act="memCancel">Abbrechen</button></div></form></li>`;
+    const nb=nextBirthday(m);
+    return`<li class="contact"><div><div class="name">${esc(m.name)}${m.active===false?` <span class="chip">archiviert</span>`:""}</div>
+      <div class="det">${m.phone?`<span>${esc(m.phone)}</span>`:""}${m.email?`<span>${esc(m.email)}</span>`:""}${m.address?`<span>${esc(m.address)}</span>`:""}${m.birthday?`<span style="user-select:auto">Geb. ${fmtD(m.birthday)}${nb?` (wird ${nb.age})`:""}</span>`:""}
+      ${!m.phone&&!m.email&&!m.address&&!m.birthday?"<span style='user-select:auto'>Keine Kontaktdaten</span>":""}</div></div>
+      <div class="row">${m.phone?`<button class="btn small" data-act="copyPhone" data-mid="${id}">Nummer kopieren</button>`:""}
+      ${K()?`<button class="btn small" data-act="memEdit" data-mid="${id}">Bearbeiten</button><button class="btn small ${m.active===false?"":"danger"}" data-act="memToggle" data-mid="${id}">${m.active===false?"Reaktivieren":"Archivieren"}</button>`:""}</div></li>`}).join("")
+    :`<li class="empty">Noch niemand eingetragen.${K()?" Füg oben die Stammtischrunde hinzu.":""}</li>`}</ul></div>`;
+  if(K()){const s=S.settings;
+    h+=`<h3>Regeln</h3><div class="card pad stack"><form class="stack" data-form="settings"><div class="set-grid">
+      <label class="f">Beitrag pro Abend (€)<input type="number" id="setB" min="0" step="0.5" value="${s.beitrag}"></label>
+      <label class="f">Strafe bei Fehlen (€)<input type="number" id="setS" min="0" step="0.5" value="${s.strafe}"></label>
+</div>
+      <div><button class="btn primary">Regeln speichern</button></div></form>
+      <div class="note">Gilt für neu angelegte Abende. Bereits erfasste Abende behalten ihre Beträge.</div></div>`;}
+  h+=`<h3>Kassier</h3><div class="card pad stack">
+    ${role.kassier
+      ?`<div>${role.demo?"In der Vorschau bist du automatisch Kassier.":"Du bist auf diesem Gerät als <b>Kassier</b> angemeldet und kannst alles bearbeiten."}</div>
+        <div class="row"><button class="btn small" data-act="asMember">${view.asMember?"Zurück zur Kassier-Ansicht":"Als Mitglied ansehen"}</button>${role.demo?"":`<button class="btn small danger" data-act="kassierOut">Als Kassier abmelden</button>`}</div>`
+      :`<div class="note">Mitglieder sehen alles, sagen selbst zu oder ab und stimmen ab. Wer den Kassier-PIN kennt, erfasst Anwesenheit, Zahlungen und Buchungen.</div>
+        <form class="inline" data-form="kassierPin"><input type="password" id="kPin" autocomplete="off" autocapitalize="off" placeholder="Kassier-PIN" required><button class="btn primary">Als Kassier anmelden</button></form>`}
+    </div>`;
+  keep(()=>$("#v-leute").innerHTML=h);
+}
+
+/* ---------- Statistik ---------- */
+function renderStatistik(){
+  const years=[...new Set([today.getFullYear(),...Object.keys(S.meetings).map(k=>+k.slice(0,4))])].sort((a,b)=>b-a);
+  const mts=heldMeetings().filter(([k])=>view.year==="all"||k.startsWith(view.year+"-"));
+  const per={};let A=0,N=0,paid=0,straf=0,guests=0;const LG=ledger();
+  for(const[k,mt]of mts){guests+=(mt.guests||[]).length;
+    for(const id of mt.rounds||[]){(per[id]=per[id]||{a:0,e:0,x:0,paid:0,strafe:0,rounds:0,streak:0,best:0}).rounds++}
+    for(const[id,e]of Object.entries(mt.entries||{})){if(!e.s)continue;const p=per[id]=per[id]||{a:0,e:0,x:0,paid:0,strafe:0,rounds:0,streak:0,best:0};
+      p[e.s]++;N++;if(e.s==="a"){A++;p.streak++;p.best=Math.max(p.best,p.streak)}else if(e.s==="x")p.streak=0;
+      if(e.paid||LG[id]?.cov.has(k)){const d=due(mt,e);p.paid+=d;paid+=d;if(e.s==="x"){p.strafe+=mt.strafe??10;straf+=mt.strafe??10}}}}
+  const ids=Object.keys(per).filter(id=>S.members[id]);
+  const top=(f,min=1)=>{const v=Math.max(0,...ids.map(id=>per[id][f]));if(v<min)return null;return{v,who:ids.filter(id=>per[id][f]===v).map(id=>first(mName(id)))}};
+  const B=[["Stammgast",top("a"),"mal da","S"],["Längste Serie",top("best"),"in Folge","L"],["Strafkönig",top("x"),"mal gefehlt","€"],["Rundenkönig",top("rounds"),"Runden","R"]];
+  let h=`<div class="row spread"><h2>Statistik</h2><select data-chg="yearSel" aria-label="Jahr">${years.map(y=>`<option ${y===view.year?"selected":""}>${y}</option>`).join("")}<option value="all" ${view.year==="all"?"selected":""}>Gesamt</option></select></div>
+  <div class="stats">
+    <div class="card stat"><div class="lbl">Stammtische</div><div class="val num">${mts.length}</div></div>
+    <div class="card stat"><div class="lbl">Ø Anwesenheit</div><div class="val num">${N?Math.round(A/N*100):0} %</div></div>
+    <div class="card stat"><div class="lbl">Eingenommen</div><div class="val num good">${eur(paid)}</div></div>
+    <div class="card stat"><div class="lbl">davon Strafen</div><div class="val num">${eur(straf)}</div></div>
+    <div class="card stat"><div class="lbl">Gäste</div><div class="val num">${guests}</div></div></div>
+  <div class="badges">${B.map(([t,r,u,ic])=>`<div class="card badge"><span class="medal" aria-hidden="true">${ic}</span><span class="lbl">${t}</span>
+    ${r?`<span class="who">${r.who.map(esc).join(", ")}</span><span class="note num">${r.v} ${u}</span>`:`<span class="note">noch offen</span>`}</div>`).join("")}</div>`;
+  if(!mts.length)h+=`<div class="card empty">Noch keine Stammtische in diesem Zeitraum erfasst.</div>`;
+  else{
+    const W=Math.max(320,mts.length*44),H=170,top_=14,bottom=26,left=26;
+    const max=Math.max(1,...mts.map(([,mt])=>Object.values(mt.entries||{}).filter(e=>e.s).length));
+    const bw=(W-left)/mts.length,sc=v=>top_+(H-top_-bottom)*(1-v/max);let g="";const step=max<=6?1:Math.ceil(max/5);
+    for(let v=0;v<=max;v+=step)g+=`<line x1="${left}" x2="${W}" y1="${sc(v)}" y2="${sc(v)}" stroke="var(--line)"/><text x="${left-6}" y="${sc(v)+4}" text-anchor="end">${v}</text>`;
+    mts.forEach(([k,mt],i)=>{let a=0,x=0;for(const en of Object.values(mt.entries||{})){if(en.s==="a")a++;if(en.s==="x")x++}
+      const xx=left+i*bw+bw*.18,w=bw*.64;
+      g+=`<rect x="${xx}" y="${sc(a+x)}" width="${w}" height="${sc(a)-sc(a+x)}" fill="var(--bad)" opacity=".55"/>`;
+      g+=`<rect x="${xx}" y="${sc(a)}" width="${w}" height="${sc(0)-sc(a)}" fill="var(--accent)"><title>${fmtD(mt.date)}: ${a} da, ${x} nicht da</title></rect>`;
+      g+=`<text x="${xx+w/2}" y="${H-8}" text-anchor="middle">${view.year==="all"?k.slice(5)+"/"+k.slice(2,4):MONATE[+k.slice(5)-1].slice(0,3)}</text>`});
+    h+=`<div class="card chart pad"><div class="note" style="margin-bottom:6px">Anwesenheit pro Stammtisch</div><div class="tablewrap"><svg viewBox="0 0 ${W} ${H}" style="min-width:${Math.min(W,600)}px" role="img" aria-label="Anwesenheit pro Stammtisch">${g}</svg></div>
+      <div class="note" style="margin-top:6px"><span style="color:var(--accent)">■</span> da &nbsp; <span style="color:var(--bad)">■</span> nicht da</div></div>`;
+    const rows=ids.sort((a,b)=>per[b].a-per[a].a||per[a].x-per[b].x);
+    h+=`<div class="card tablewrap"><table><thead><tr><th>Mitglied</th><th>Da</th><th>Nicht da</th><th>Quote</th><th>Serie</th><th>Runden</th><th>Bezahlt</th><th>Strafen</th></tr></thead><tbody>${
+      rows.map(id=>{const p=per[id];const n=p.a+p.x;const q=n?Math.round(p.a/n*100):0;return`<tr><td>${esc(mName(id))}</td><td class="num">${p.a}</td><td class="num">${p.x}</td>
+      <td><div class="row" style="justify-content:flex-end;flex-wrap:nowrap"><div class="bar"><span style="width:${q}%"></span></div><span class="num">${q} %</span></div></td>
+      <td class="num">${p.best}</td><td class="num">${p.rounds}</td><td class="num">${eur(p.paid)}</td><td class="num">${eur(p.strafe)}</td></tr>`}).join("")}</tbody></table></div>`;
+  }
+  keep(()=>$("#v-statistik").innerHTML=h);
+}
+
+/* ---------- Chronik ---------- */
+function renderChronik(){
+  const dec=Object.entries(S.decisions).sort((a,b)=>b[1].date.localeCompare(a[1].date));
+  let h=`<h2>Beschlüsse</h2>`;
+  if(K())h+=`<div class="card pad"><form class="inline" data-form="decision"><input type="date" id="decDate" data-keep value="${todayISO}" aria-label="Datum"><input type="text" id="decText" data-keep placeholder="z. B. Ab 2027 Beitrag 15 €" required><button class="btn primary">Festhalten</button></form></div>`;
+  h+=`<div class="card"><ul class="list ledger">${dec.length?dec.map(([id,d])=>`<li><span class="date num">${fmtD(d.date)}</span><span>${esc(d.text)}</span><span></span><span class="del">${K()?`<button class="btn small danger" data-act="decDel" data-id="${id}">Löschen</button>`:""}</span></li>`).join("")
+    :`<li class="empty" style="display:block">Noch keine Beschlüsse festgehalten.</li>`}</ul></div>`;
+  const mts=Object.entries(S.meetings).filter(([,mt])=>mt.date<=todayISO&&(mt.cancelled||Object.values(mt.entries||{}).some(e=>e.s)||mt.note||(mt.photos||[]).length)).sort((a,b)=>b[1].date.localeCompare(a[1].date));
+  h+=`<h2>Chronik</h2>`;
+  h+=mts.length?mts.map(([k,mt])=>{const pres=Object.entries(mt.entries||{}).filter(([,e])=>e.s==="a").map(([id])=>first(mName(id)));
+    return`<div class="card pad stack"><div class="row spread"><h3>${fmtDL(mt.date)} ${mt.date.slice(0,4)}</h3>${mt.cancelled?`<span class="chip bad">abgesagt</span>`:`<span class="chip good">${pres.length} da</span>`}</div>
+      ${!mt.cancelled&&pres.length?`<div class="note">Dabei: ${pres.map(esc).join(", ")}${(mt.guests||[]).length?` · Gäste: ${mt.guests.map(esc).join(", ")}`:""}${(mt.rounds||[]).length?` · Runden: ${mt.rounds.map(id=>esc(first(mName(id)))).join(", ")}`:""}</div>`:""}
+      ${mt.note?`<div style="white-space:pre-wrap">${esc(mt.note)}</div>`:""}
+      ${(mt.photos||[]).length?`<div class="photos">${mt.photos.map(p=>`<figure><a href="#" data-act="viewImg" data-id="${esc(p)}"><img src="${imgSrc(p)}" data-blob="${esc(p)}" alt="Foto vom Stammtisch" loading="lazy"></a></figure>`).join("")}</div>`:""}</div>`}).join("")
+    :`<div class="card empty">Die Chronik füllt sich mit jedem Stammtisch: Anwesende, Gäste, Protokoll und Fotos.</div>`;
+  keep(()=>$("#v-chronik").innerHTML=h);
+}
+
+/* ---------- Kopf & Gesamt ---------- */
+function renderHeader(){
+  $("#hdrKasse").textContent=eur(finance().stand);
+  const k=nextMeetingKey();if(!k){$("#nextInfo").textContent="Kein Termin geplant";return}
+  const mt=getMeeting(k);const d=new Date(mt.date+"T12:00");const t0=new Date(todayISO+"T12:00");const days=Math.round((d-t0)/864e5);
+  $("#nextInfo").textContent=(days===0?"Heute ist Stammtisch!":`Nächster Stammtisch: ${fmtDL(mt.date)}${mt.date.slice(8)!=="16"?" (verlegt)":""} · in ${days} ${days===1?"Tag":"Tagen"}`);
+}
+function render(){
+  if(view.tab==="termine"&&view.seenSnap==null){view.seenSnap=seenAt;seenAt=Date.now();lsSetS("stt-seen",String(seenAt))}
+  if(view.tab!=="termine")view.seenSnap=null;
+  renderHeader();
+  document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===view.tab));
+  ["abend","termine","kasse","leute","statistik","chronik"].forEach(t=>$("#v-"+t).hidden=t!==view.tab);
+  const rn=$("#roleNote");
+  if(view.asMember){rn.hidden=false;rn.innerHTML=`Du siehst die App so wie ein Mitglied. <button class="btn link" data-act="asMember">Zurück zur Kassier-Ansicht</button>`}
+  else if(!role.demo&&store.ready&&role.me&&!myMember()&&Object.keys(S.members).length&&!lsGet("stt-skipme")){rn.hidden=false;
+    rn.innerHTML=`<div class="row spread"><span><b>Wer bist du?</b> Einmal auswählen, dann kannst du zu- und absagen und abstimmen.</span>
+      <span class="row"><select data-chg="meSelect" id="meSelTop" aria-label="Ich bin"><option value="">– Name wählen –</option>${sortedMembers(false).map(([id,m])=>`<option value="${id}">${esc(m.name)}</option>`).join("")}</select>
+      <button class="btn small" data-act="skipMe">Später</button></span></div>`}
+  else rn.hidden=true;
+  ({abend:renderAbend,termine:renderTermine,kasse:renderKasse,leute:renderLeute,statistik:renderStatistik,chronik:renderChronik})[view.tab]();
+  updateBadges();
+}
+
+/* ---------- Aktionen ---------- */
+function fileToDataUrl(f){return new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=no;r.readAsDataURL(f)})}
+async function compress(file){
+  if(!file.type.startsWith("image/")){if(file.size>700e3)throw new Error("too_large");return fileToDataUrl(file)}
+  const url=URL.createObjectURL(file);
+  try{const img=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=url});
+    let max=1600,q=.82,out="";
+    for(let n=0;n<6;n++){const sc=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));const c=document.createElement("canvas");
+      c.width=Math.round(img.naturalWidth*sc);c.height=Math.round(img.naturalHeight*sc);c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      out=c.toDataURL("image/jpeg",q);if(out.length<900e3)return out;max*=.75;q-=.07}
+    throw new Error("too_large")}finally{URL.revokeObjectURL(url)}
+}
+async function uploadFiles(files){const ids=[];
+  for(const f of files){try{const data=await compress(f);
+      if(role.demo||!fb){ids.push(data);continue}
+      const id=uid("b");await fb.F.setDoc(fb.F.doc(fb.db,"blobs",id),{data,type:f.type||"",at:Date.now()});blobCache[id]=data;ids.push(id)}
+    catch(e){toast(e&&e.message==="too_large"?"Datei zu groß. PDF-Belege bitte unter 700 KB, oder ein Foto davon machen.":e&&e.code==="permission-denied"?"Nur der Kassier kann Fotos hochladen.":"Upload fehlgeschlagen.")}}
+  return ids}
+function setRsvp(k,memberId,a,self){
+  const at=new Date().toISOString().slice(0,16);
+  if(self&&role.me){const p={memberId,rsvp:{},votes:{},...(S.people[role.me]||{})};p.rsvp={...(p.rsvp||{}),[k]:{a,at}};S.people[role.me]=p;render();store.set("people",role.me,p);}
+  else{const mt=getMeeting(k);saveMeeting(k,{rsvp:{...(mt.rsvp||{}),[memberId]:{a,at}}})}
+  toast(a==="yes"?"Zusage gespeichert":"Absage gespeichert");
+}
+async function loadScript(src){if(document.querySelector(`script[src="${src}"]`))return;await new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)})}
+async function saveFile(filename,data){
+  try{const type=filename.endsWith(".pdf")?"application/pdf":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    const blob=data instanceof Blob?data:new Blob([data],{type});
+    if(matchMedia("(pointer:coarse)").matches&&navigator.canShare){const file=new File([blob],filename,{type:blob.type||type});
+      if(navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:filename});return}catch(e){if(e&&e.name==="AbortError")return}}}
+    const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),5000)}
+  catch{toast("Datei konnte nicht gespeichert werden.")}
+}
+
+async function exportPdf(){
+  const y=$("#expYear").value;try{await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js")}catch{toast("PDF-Modul konnte nicht geladen werden.");return}
+  const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:"mm",format:"a4"});let Y=20;
+  const line=(t,o={})=>{if(Y>280){doc.addPage();Y=20}doc.setFont("helvetica",o.b?"bold":"normal");doc.setFontSize(o.s||10.5);
+    if(o.r!=null){doc.text(String(t),20,Y);doc.text(String(o.r),190,Y,{align:"right"})}else doc.text(String(t),o.x||20,Y);Y+=o.h||6};
+  const f=finance(y);const start=balanceBefore(`${y}-01-01`);
+  line(`Stammtisch – Jahresabschluss ${y}`,{b:1,s:18,h:10});line(`Erstellt am ${fmtD(todayISO)}`,{s:9,h:10});
+  line("Kassa",{b:1,s:13,h:8});
+  line("Anfangsstand 1.1.",{r:eurP(start)});line("+ Beiträge und Strafen (am Abend kassiert)",{r:eurP(f.beitr)});line("+ Zahlungen und Vorauszahlungen",{r:eurP(f.zahl)});
+  line("+ Sonstige Einnahmen",{r:eurP(f.inn)});line("- Ausgaben",{r:eurP(f.out)});line(`Endstand 31.12. bzw. heute`,{b:1,r:eurP(start+f.stand),h:10});
+  const outs=Object.values(S.tx).filter(t=>t.date.startsWith(y)).sort((a,b)=>a.date.localeCompare(b.date));
+  if(outs.length){line("Einzelbuchungen",{b:1,s:13,h:8});outs.forEach(t=>line(`${fmtD(t.date)}  ${t.text}${t.eventId&&S.events[t.eventId]?" ("+S.events[t.eventId].title+")":""}`.slice(0,90),{r:(t.kind==="in"?"+ ":"- ")+eurP(t.amount)}));Y+=4}
+  const L=ledger();const debt=sortedMembers(true).filter(([id])=>(L[id]?.balance||0)<-0.005);
+  if(debt.length){line("Offene Beträge (Stand heute)",{b:1,s:13,h:8});debt.forEach(([id,m])=>line(m.name,{r:eurP(-L[id].balance)}));Y+=4}
+  const mts=heldMeetings().filter(([k])=>k.startsWith(y+"-"));
+  line(`Anwesenheit (${mts.length} Stammtische)`,{b:1,s:13,h:8});
+  const per={};for(const[,mt]of mts)for(const[id,e]of Object.entries(mt.entries||{})){if(!e.s)continue;const p=per[id]=per[id]||{a:0,e:0,x:0};p[e.s]++}
+  doc.setFontSize(9);line("Name",{b:1,h:0});doc.text("Da",130,Y);doc.text("Nicht da",155,Y);doc.text("Quote",190,Y,{align:"right"});Y+=6;
+  Object.entries(per).sort((a,b)=>b[1].a-a[1].a).forEach(([id,p])=>{const n=p.a+p.x;line(mName(id),{h:0});doc.text(String(p.a),130,Y);doc.text(String(p.x),155,Y);doc.text(Math.round(p.a/n*100)+" %",190,Y,{align:"right"});Y+=6});
+  const dec=Object.values(S.decisions).filter(d=>d.date.startsWith(y)).sort((a,b)=>a.date.localeCompare(b.date));
+  if(dec.length){Y+=4;line("Beschlüsse",{b:1,s:13,h:8});dec.forEach(d=>doc.splitTextToSize(`${fmtD(d.date)}  ${d.text}`,170).forEach(l=>line(l)))}
+  Y+=14;line("_____________________          _____________________",{h:5});line("Kassier                                        Kassaprüfer",{s:9});
+  await saveFile(`Stammtisch-Jahresabschluss-${y}.pdf`,doc.output("arraybuffer"));
+}
+async function exportXlsx(){
+  try{await loadScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js")}catch{toast("Excel-Modul konnte nicht geladen werden.");return}
+  const X=window.XLSX,wb=X.utils.book_new(),add=(rows,name)=>X.utils.book_append_sheet(wb,X.utils.json_to_sheet(rows.length?rows:[{Hinweis:"keine Daten"}]),name);
+  const L=ledger();
+  add(sortedMembers(true).map(([id,m])=>({Name:m.name,Aktiv:m.active===false?"nein":"ja",Telefon:m.phone||"",EMail:m.email||"",Adresse:m.address||"",Geburtstag:m.birthday||"",Saldo:Math.round((L[id]?.balance||0)*100)/100})),"Mitglieder");
+  const att=[];const ST={a:"da",x:"nicht da"};
+  for(const[k,mt]of Object.entries(S.meetings).sort())for(const[id,e]of Object.entries(mt.entries||{}))if(e.s)att.push({Datum:mt.date,Abgesagt:mt.cancelled?"ja":"",Mitglied:mName(id),Status:ST[e.s],Betrag:due(mt,e),Bezahlt:e.paid?"ja":"nein"});
+  add(att,"Anwesenheit");
+  add(Object.entries(S.meetings).sort().map(([k,mt])=>({Datum:mt.date,Abgesagt:mt.cancelled?"ja":"",Gaeste:(mt.guests||[]).join(", "),Runden:(mt.rounds||[]).map(mName).join(", "),Protokoll:mt.note||""})),"Stammtische");
+  add(Object.values(S.tx).sort((a,b)=>a.date.localeCompare(b.date)).map(t=>({Datum:t.date,Art:t.kind==="in"?"Einnahme":"Ausgabe",Text:t.text,Betrag:+t.amount,Veranstaltung:S.events[t.eventId]?.title||""})),"Buchungen");
+  add(Object.values(S.payments).sort((a,b)=>a.date.localeCompare(b.date)).map(p=>({Datum:p.date,Mitglied:mName(p.memberId),Betrag:+p.amount,Notiz:p.note||""})),"Zahlungen");
+  add(Object.values(S.decisions).sort((a,b)=>a.date.localeCompare(b.date)).map(d=>({Datum:d.date,Beschluss:d.text})),"Beschluesse");
+  await saveFile(`Stammtisch-Export-${todayISO}.xlsx`,X.write(wb,{type:"array",bookType:"xlsx"}));
+}
+
+let pendingReceipt=null;
+function payRest(id,k,mt,rest){if(!(rest>0))return;const pid=uid("p");const p={memberId:id,date:mt.date,amount:rest,note:`Rest Stammtisch ${keyName(k)}`};S.payments[pid]=p;store.set("payments",pid,p)}
+const ACT={
+  tab:b=>{view.tab=b.dataset.tab;try{localStorage.setItem("stt-tab",view.tab)}catch{}render();window.scrollTo(0,0)},
+  prevM:()=>{view.m--;if(view.m<0){view.m=11;view.y--}render()},
+  nextM:()=>{view.m++;if(view.m>11){view.m=0;view.y++}render()},
+  cancelToggle:()=>{const k=curKey(),mt=getMeeting(k);
+    if(!mt.cancelled&&Object.values(mt.entries||{}).some(e=>e.paid)){toast("Es wurde schon kassiert. Nimm zuerst die Bezahlt-Vermerke zurück, dann kannst du absagen.");return}
+    saveMeeting(k,{cancelled:!mt.cancelled})},
+  seg:b=>{const k=curKey(),mt=getMeeting(k),id=b.dataset.mid,entries={...(mt.entries||{})},cur={...(entries[id]||{})};
+    if(cur.s===b.dataset.s){delete entries[id];if(cur.paid)toast("Eintrag samt Bezahlt-Vermerk entfernt.")}
+    else{entries[id]={s:b.dataset.s,paid:false};if(cur.paid)toast("Betrag hat sich geändert: Bitte die Zahlung neu abhaken.")}
+    saveMeeting(k,{entries})},
+  pay:b=>{const k=curKey(),mt=getMeeting(k),id=b.dataset.mid,entries={...(mt.entries||{})};if(!entries[id]?.s)return;
+    const LL=ledger()[id];if(!entries[id].paid&&LL?.cov.has(k)){toast("Schon über eine Zahlung beglichen.");return}
+    if(!entries[id].paid&&LL?.part[k]){const rest=Math.round((due(mt,entries[id])-LL.part[k])*100)/100;payRest(id,k,mt,rest);toast(`Rest ${eur(rest)} von ${first(mName(id))} gebucht`);return}entries[id]={...entries[id],paid:!entries[id].paid};saveMeeting(k,{entries})},
+  allA:()=>{const k=curKey(),mt=getMeeting(k),entries={...(mt.entries||{})};sortedMembers(false).forEach(([id])=>{if(!entries[id]?.s)entries[id]={s:"a",paid:false}});saveMeeting(k,{entries})},
+  takeRsvp:()=>{const k=curKey(),mt=getMeeting(k),R=rsvpMap(k),dl=deadline(mt),entries={...(mt.entries||{})};let n=0;
+    for(const[id,r]of Object.entries(R))if(r.a==="no"&&!entries[id]?.s&&S.members[id]){entries[id]={s:"x",paid:false};n++}
+    saveMeeting(k,{entries});toast(n?`${n} als „nicht da“ eingetragen`:"Keine offenen Absagen")},
+  allPaid:()=>{const k=curKey(),mt=getMeeting(k),L=ledger(),entries={};
+    for(const[id,e]of Object.entries(mt.entries||{})){
+      if(e.s&&!e.paid&&L[id]?.part[k]){payRest(id,k,mt,Math.round((due(mt,e)-L[id].part[k])*100)/100);entries[id]=e}
+      else entries[id]=e.s&&!L[id]?.cov.has(k)?{...e,paid:true}:e}
+    saveMeeting(k,{entries})},
+  guestDel:b=>{const k=curKey(),g=[...(getMeeting(k).guests||[])];g.splice(+b.dataset.i,1);saveMeeting(k,{guests:g})},
+  roundDel:b=>{const k=curKey(),r=[...(getMeeting(k).rounds||[])];r.splice(+b.dataset.i,1);saveMeeting(k,{rounds:r})},
+  roundRandom:()=>{const k=curKey(),mt=getMeeting(k);const pres=Object.entries(mt.entries||{}).filter(([id,e])=>e.s==="a"&&S.members[id]).map(([id])=>id);
+    if(!pres.length){toast("Zuerst die Anwesenden abhaken.");return}
+    const cnt={};pres.forEach(id=>cnt[id]=0);for(const[kk,m]of Object.entries(S.meetings))if(kk.startsWith(k.slice(0,4)))(m.rounds||[]).forEach(id=>{if(id in cnt)cnt[id]++});
+    const min=Math.min(...Object.values(cnt));const pool=pres.filter(id=>cnt[id]===min);const pick=pool[Math.floor(Math.random()*pool.length)];
+    saveMeeting(k,{rounds:[...(mt.rounds||[]),pick]});toast(`${first(mName(pick))} zahlt die Runde!`)},
+  photoDel:b=>confirmBtn(b,()=>{const k=curKey();saveMeeting(k,{photos:(getMeeting(k).photos||[]).filter(p=>p!==b.dataset.id)})}),
+  rsvp:b=>{const me=myMember();if(!me)return;setRsvp(b.dataset.k,me,b.dataset.a,true)},
+  rsvpFor:b=>{const sel=document.getElementById("rsf-"+b.dataset.k);if(!sel||!sel.value)return;const k=b.dataset.k,mt=getMeeting(k);
+    const at=new Date().toISOString().slice(0,16);saveMeeting(k,{rsvp:{...(mt.rsvp||{}),[sel.value]:{a:b.dataset.a,at}}});toast(`${first(mName(sel.value))}: ${b.dataset.a==="yes"?"Zusage":"Absage"} gespeichert`)},
+  eventDel:b=>confirmBtn(b,()=>{delete S.events[b.dataset.id];store.del("events",b.dataset.id);render()}),
+  vote:b=>{if(!role.me)return;const p={...(S.people[role.me]||{})};p.votes={...(p.votes||{}),[b.dataset.p]:+b.dataset.i};S.people[role.me]=p;render();store.set("people",role.me,p)},
+  pollClose:b=>{const p={...S.polls[b.dataset.p],closed:!S.polls[b.dataset.p].closed};S.polls[b.dataset.p]=p;store.set("polls",b.dataset.p,p);render()},
+  pollDel:b=>confirmBtn(b,()=>{delete S.polls[b.dataset.p];store.del("polls",b.dataset.p);render()}),
+  payFor:b=>{view.payFor=view.payFor===b.dataset.mid?null:b.dataset.mid;render();setTimeout(()=>$("#payAmt")?.focus(),0)},
+  payCancel:()=>{view.payFor=null;render()},
+  copyMsg:b=>{const m=S.members[b.dataset.mid],bal=ledger()[b.dataset.mid]?.balance||0;copy(`Servus ${first(m.name)}, laut Stammtisch-Kassa hast du noch ${eur(-bal)} offen. Danke!`)},
+  copyPhone:b=>copy(S.members[b.dataset.mid].phone),
+  txDel:b=>confirmBtn(b,()=>{delete S.tx[b.dataset.id];store.del("tx",b.dataset.id);render();toast("Buchung gelöscht")}),
+  paymentDel:b=>confirmBtn(b,()=>{delete S.payments[b.dataset.id];store.del("payments",b.dataset.id);render();toast("Zahlung gelöscht")}),
+  memEdit:b=>{view.editMem=b.dataset.mid;render()},
+  memCancel:()=>{view.editMem=null;render()},
+  memToggle:b=>{const id=b.dataset.mid,n={...S.members[id],active:S.members[id].active===false};S.members[id]=n;store.set("members",id,n);render()},
+  decDel:b=>confirmBtn(b,()=>{delete S.decisions[b.dataset.id];store.del("decisions",b.dataset.id);render()}),
+  asMember:()=>{view.asMember=!view.asMember;render()},
+  exportPdf:()=>exportPdf(),exportXlsx:()=>exportXlsx()
+};
+const FORM={
+  guest:f=>{const v=$("#guestName").value.trim();if(!v)return;const k=curKey();$("#guestName").value="";saveMeeting(k,{guests:[...(getMeeting(k).guests||[]),v]})},
+  round:f=>{const v=$("#roundMem").value;if(!v)return;const k=curKey();saveMeeting(k,{rounds:[...(getMeeting(k).rounds||[]),v]});toast(`Runde von ${first(mName(v))} eingetragen`)},
+  event:f=>{const e={title:$("#evTitle").value.trim(),date:$("#evDate").value,place:$("#evPlace").value.trim(),note:$("#evNote").value.trim(),created:new Date().toISOString()};if(!e.title||!e.date)return;
+    const id=uid("e");S.events[id]=e;store.set("events",id,e);["#evTitle","#evDate","#evPlace","#evNote"].forEach(s=>$(s).value="");render();toast("Veranstaltung angelegt")},
+  poll:f=>{const q=$("#pollQ").value.trim(),o=$("#pollO").value.split(",").map(s=>s.trim()).filter(Boolean);if(!q||o.length<2){toast("Bitte mindestens zwei Antworten angeben.");return}
+    const id=uid("q"),p={question:q,options:o,closed:false,created:new Date().toISOString()};S.polls[id]=p;store.set("polls",id,p);$("#pollQ").value="";$("#pollO").value="";render();toast("Abstimmung gestartet. Mit „In WhatsApp teilen“ gibst du der Runde Bescheid.")},
+  payment:f=>{const amt=Math.round(parseFloat($("#payAmt").value)*100)/100;if(!(amt>0))return;const id=uid("p");
+    const p={memberId:f.dataset.mid,date:$("#payDate").value||todayISO,amount:amt,note:$("#payNote").value.trim()};S.payments[id]=p;store.set("payments",id,p);
+    view.payFor=null;$("#payAmt").value="";$("#payNote").value="";render();toast(`${eur(amt)} von ${first(mName(p.memberId))} gebucht`)},
+  tx:async f=>{const amt=Math.round(parseFloat($("#txAmt").value)*100)/100,text=$("#txText").value.trim();if(!(amt>0)||!text)return;
+    const t={date:$("#txDate").value||todayISO,kind:$("#txKind").value,amount:amt,text};if($("#txEvent").value)t.eventId=$("#txEvent").value;
+    if(pendingReceipt){const r=await uploadFiles([pendingReceipt]);if(r[0])t.receipt=r[0];pendingReceipt=null}
+    const id=uid("t");S.tx[id]=t;store.set("tx",id,t);$("#txText").value="";$("#txAmt").value="";render();toast(t.kind==="in"?"Einnahme gebucht":"Ausgabe gebucht")},
+  memAdd:f=>{const name=$("#memName").value.trim();if(!name)return;const id=uid("m");S.members[id]={name,active:true,phone:"",email:"",address:"",birthday:""};
+    store.set("members",id,S.members[id]);$("#memName").value="";render();toast(name+" hinzugefügt")},
+  memSave:f=>{const id=f.dataset.mid;const n={...S.members[id],name:$("#me-name").value.trim()||S.members[id].name,phone:$("#me-phone").value.trim(),email:$("#me-email").value.trim(),birthday:$("#me-bday").value,address:$("#me-addr").value.trim()};
+    S.members[id]=n;store.set("members",id,n);view.editMem=null;render();toast("Gespeichert")},
+  settings:f=>{const s={beitrag:Math.max(0,+$("#setB").value||0),strafe:Math.max(0,+$("#setS").value||0)};
+    S.settings=s;store.set("config","settings",s);render();toast("Regeln gespeichert")},
+  decision:f=>{const d={date:$("#decDate").value||todayISO,text:$("#decText").value.trim()};if(!d.text)return;const id=uid("d");S.decisions[id]=d;store.set("decisions",id,d);$("#decText").value="";render();toast("Beschluss festgehalten")}
+};
+const CHG={
+  mDate:el=>{if(el.value)saveMeeting(curKey(),{date:el.value})},
+  meNote:el=>{const k=curKey();if((getMeeting(k).note||"")!==el.value)saveMeeting(k,{note:el.value})},
+  photosUp:async el=>{const files=[...el.files];if(!files.length)return;toast("Fotos werden hochgeladen …");const k=curKey();const ids=await uploadFiles(files);
+    if(ids.length){saveMeeting(k,{photos:[...(getMeeting(k).photos||[]),...ids]});toast(`${ids.length} Foto${ids.length>1?"s":""} hinzugefügt`)}},
+  txFile:el=>{pendingReceipt=el.files[0]||null;const n=$("#txFileName");if(n)n.textContent=pendingReceipt?pendingReceipt.name:""},
+  meSelect:el=>{if(!role.me)return;const p={rsvp:{},votes:{},...(S.people[role.me]||{}),memberId:el.value||null};S.people[role.me]=p;store.set("people",role.me,p);render()},
+  yearSel:el=>{view.year=el.value==="all"?"all":+el.value;render()},
+  ledgerFilter:el=>{view.ledgerFilter=el.value;render()},
+  payPick:el=>{if(!el.value)return;view.payFor=el.value;render();setTimeout(()=>$("#payAmt")?.focus(),0)}
+};
+document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b||b.disabled)return;const fn=ACT[b.dataset.act];if(fn){e.preventDefault();fn(b,e)}});
+document.addEventListener("submit",e=>{const f=e.target.closest("form[data-form]");if(!f)return;e.preventDefault();FORM[f.dataset.form]?.(f)});
+document.addEventListener("change",e=>{const el=e.target.closest("[data-chg]");if(el)CHG[el.dataset.chg]?.(el)});
+
+/* ---------- Start ---------- */
+function dayCheck(){if(iso(new Date())===todayISO)return;const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))return;location.reload()}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)dayCheck()});
+setInterval(()=>{if(!document.hidden)dayCheck()},300000);
+try{const t=localStorage.getItem("stt-tab");if(t&&$("#v-"+t))view.tab=t}catch{}
+render();
+let watching=false;
+function startWatching(){if(watching)return;watching=true;store.ready=true;
+  const cols=["members","meetings","tx","payments","events","polls","decisions","people"];
+  for(const c of cols)store.watch(c,o=>{applySnap(c,o);render()});
+  store.watch("config",o=>{applySnap("config",o);render()});
+  render();
+}
+function showGate(){$("#gate").hidden=false;setTimeout(()=>$("#gatePin")?.focus(),50)}
+async function tryPin(pin,which){const{F,db,uid}=fb;
+  for(const col of which){try{await F.setDoc(F.doc(db,col,uid),{pin,at:Date.now()});return col}catch(e){if(e.code!=="permission-denied")throw e}}
+  /* Gerät war schon freigeschaltet (z. B. Anzeige nach Verbindungsproblem) */
+  try{if(which.includes("access")&&(await F.getDoc(F.doc(db,"access",uid))).exists())return"access"}catch{}
+  return null}
+/* Nach dem Zeichnen Fotos nachladen */
+const _render=render;render=function(){_render();hydrateImgs()};
+
+Object.assign(ACT,{
+  viewImg:async b=>{const src=await loadBlob(b.dataset.id);if(!src){toast("Bild nicht gefunden.");return}
+    if(src.startsWith("data:application/pdf")){const r=await fetch(src);await saveFile("Beleg.pdf",await r.blob());return}
+    const lb=$("#lightbox");lb.querySelector("img").src=src;lb.hidden=false},
+  closeLb:()=>{$("#lightbox").hidden=true},
+  kassierOut:async()=>{if(!fb)return;try{await fb.F.deleteDoc(fb.F.doc(fb.db,"admins",fb.uid))}catch{}role.kassier=false;view.asMember=false;render();toast("Als Kassier abgemeldet")},
+  skipMe:()=>{lsSet("stt-skipme","1");render()},
+  install:async()=>{if(!deferredInstall)return;deferredInstall.prompt();try{await deferredInstall.userChoice}catch{}deferredInstall=null;$("#installHint").hidden=true},
+  installHide:()=>{lsSet("stt-noinstall","1");$("#installHint").hidden=true}
+});
+const _photoDel=ACT.photoDel;
+ACT.photoDel=b=>{const second=!!b.dataset.confirm;_photoDel(b);if(second&&fb&&!isInline(b.dataset.id))store.del("blobs",b.dataset.id)};
+FORM.gate=async()=>{const pin=$("#gatePin").value.trim();if(!pin||!fb)return;const btn=$("#gateBtn"),msg=$("#gateMsg");
+  btn.disabled=true;msg.textContent="Wird geprüft …";
+  try{const r=await tryPin(pin,["admins","access"]);
+    if(!r){msg.textContent="PIN falsch. Frag beim Kassier nach.";return}
+    role.kassier=r==="admins";lsSet("stt-access","1");$("#gate").hidden=true;$("#gatePin").value="";msg.textContent="";
+    startWatching();toast(role.kassier?"Willkommen, Kassier!":"Willkommen beim Stammtisch!")}
+  catch(e){msg.textContent="Keine Verbindung. Bist du online?"}
+  finally{btn.disabled=false}};
+FORM.kassierPin=async()=>{const pin=$("#kPin").value.trim();if(!pin||!fb)return;
+  try{const r=await tryPin(pin,["admins"]);if(r){role.kassier=true;view.asMember=false;render();toast("Du bist jetzt Kassier")}else toast("Kassier-PIN falsch.")}
+  catch{toast("Anmeldung fehlgeschlagen. Bist du online?")}};
+
+/* Installations-Hinweis */
+let deferredInstall=null;
+const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+function showInstallHint(){if(standalone||role.demo||lsGet("stt-noinstall"))return;
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  $("#installText").textContent=deferredInstall?"Den Stammtisch als App auf dem Handy installieren?":ios?"Als App installieren: unten auf Teilen tippen, dann „Zum Home-Bildschirm“.":"Als App installieren: im Browser-Menü „App installieren“ oder „Zum Startbildschirm hinzufügen“ wählen.";
+  $("#installBtn").hidden=!deferredInstall;$("#installHint").hidden=false}
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;showInstallHint()});
+addEventListener("appinstalled",()=>{$("#installHint").hidden=true});
+if("serviceWorker" in navigator&&location.protocol.startsWith("http"))addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+
+(async()=>{
+  setTimeout(showInstallHint,1500);
+  const cfg=window.FIREBASE_CONFIG;
+  if(!cfg||!cfg.apiKey||/HIER/.test(cfg.apiKey)){
+    store=memStore(demoSeed());role.demo=true;role.kassier=true;role.me="demo";$("#demoBanner").hidden=false;startWatching();return}
+  try{
+    const B="https://www.gstatic.com/firebasejs/10.12.2/";
+    const[A,F,AU]=await Promise.all([import(B+"firebase-app.js"),import(B+"firebase-firestore.js"),import(B+"firebase-auth.js")]);
+    const app=A.initializeApp(cfg);
+    let db;try{db=F.initializeFirestore(app,{localCache:F.persistentLocalCache({tabManager:F.persistentMultipleTabManager()})})}catch{db=F.getFirestore(app)}
+    const auth=AU.getAuth(app);
+    if(auth.authStateReady)await auth.authStateReady();
+    if(!auth.currentUser)await AU.signInAnonymously(auth);
+    const user=auth.currentUser;
+    fb={F,db,uid:user.uid};role.me=user.uid;role.assets=true;store=fbStore(db,F);
+    let isK=false,hasAccess=false;
+    try{isK=(await F.getDoc(F.doc(db,"admins",user.uid))).exists();hasAccess=isK||(await F.getDoc(F.doc(db,"access",user.uid))).exists()}
+    catch{hasAccess=lsGet("stt-access")==="1";isK=lsGet("stt-kassier")==="1"}
+    role.kassier=isK;
+    if(hasAccess){lsSet("stt-access","1");startWatching()}else showGate();
+  }catch(e){console.error(e);const n=$("#loadNote");n.hidden=false;
+    n.textContent="Verbindung zur Datenbank fehlgeschlagen. Prüfe die Internetverbindung und die Werte in firebase-config.js.";}
+})();
+setInterval(()=>{lsSet("stt-kassier",role.kassier?"1":"")},5000);
+</script></script>
+
+</body>
+</html>

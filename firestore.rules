@@ -1,0 +1,42 @@
+rules_version = '2';
+// Sicherheitsregeln für die Stammtisch-App.
+// Diesen ganzen Text in der Firebase-Konsole unter Firestore Database → Regeln einfügen und veröffentlichen.
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    function signedIn()  { return request.auth != null; }
+    function isKassier() { return signedIn() && exists(/databases/$(db)/documents/admins/$(request.auth.uid)); }
+    function isMember()  { return signedIn() && (exists(/databases/$(db)/documents/access/$(request.auth.uid)) || isKassier()); }
+    function pins()      { return get(/databases/$(db)/documents/secret/pin).data; }
+
+    // Die PINs: von der App aus nie lesbar oder änderbar
+    match /secret/{doc} { allow read, write: if false; }
+
+    // Kassier-Freischaltung pro Gerät: nur mit richtigem Kassier-PIN
+    match /admins/{uid} {
+      allow read:   if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid && request.resource.data.pin == pins().kassier;
+      allow delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Mitglieder-Freischaltung pro Gerät: nur mit richtigem Runden-PIN
+    match /access/{uid} {
+      allow read:   if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid && request.resource.data.pin == pins().runde;
+      allow delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Eigene Zu-/Absagen und Stimmen: jedes Mitglied nur seine eigenen
+    match /people/{uid} {
+      allow read:  if isMember();
+      allow write: if isMember() && (request.auth.uid == uid || isKassier());
+    }
+
+    // Alles andere (Mitglieder, Abende, Kasse, Termine, Fotos …):
+    // freigeschaltete Mitglieder lesen, nur der Kassier schreibt
+    match /{coll}/{id} {
+      allow read:  if isMember() && !(coll in ['secret', 'admins', 'access']);
+      allow write: if isKassier() && !(coll in ['secret', 'admins', 'access', 'people']);
+    }
+  }
+}
