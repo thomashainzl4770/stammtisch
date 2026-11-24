@@ -136,6 +136,16 @@ label.cb{display:flex;gap:8px;align-items:center;font-size:.88rem}
 .k-hide{display:none!important}
 .dot{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:5px;border-radius:9px;background:var(--bad);color:var(--surface);font-size:.7rem;font-weight:700;vertical-align:1px}
 .chip.new{background:var(--accent);color:var(--accent-ink)}
+.todo-box{display:flex;flex-direction:column;gap:8px;background:var(--sunk);border-radius:10px;padding:10px 12px}
+.list.todos>li{padding:8px 0;display:flex;flex-direction:column;gap:4px}
+.list.todos>li:first-child{padding-top:2px}
+.card>.list.todos>li{padding:10px 14px}
+.todo .cb{align-items:flex-start}
+.todo .cb input{margin-top:2px;flex:none}
+.todo-text{overflow-wrap:anywhere}
+.todo.done .todo-text{text-decoration:line-through;color:var(--muted)}
+.todo-meta{padding-left:26px;gap:6px}
+.todo-form input[type=text]{width:100%}
 .lightbox{position:fixed;inset:0;z-index:40;background:rgba(10,14,12,.9);display:grid;place-items:center;gap:12px;align-content:center;
   padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 .lightbox img{max-width:100%;max-height:80vh;border-radius:8px}
@@ -224,7 +234,7 @@ const keyAdd=(k,n)=>{const d=new Date(+k.slice(0,4),+k.slice(5)-1+n,1);return mk
 const keyName=k=>`${MONATE[+k.slice(5)-1]} ${k.slice(0,4)}`;
 const first=n=>String(n||"").replace(/^Beispiel:\s*/,"").split(" ")[0];
 
-let S={members:{},meetings:{},tx:{},payments:{},events:{},polls:{},decisions:{},people:{},settings:{beitrag:10,strafe:10}};
+let S={members:{},meetings:{},tx:{},payments:{},events:{},polls:{},decisions:{},people:{},todos:{},settings:{beitrag:10,strafe:10}};
 let view={y:today.getFullYear(),m:today.getMonth(),tab:"abend",year:today.getFullYear(),asMember:false,payFor:null,editMem:null,ledgerFilter:"all"};
 let role={kassier:false,me:null,assets:null,downloads:null,demo:false};
 const K=()=>role.kassier&&!view.asMember;
@@ -244,7 +254,7 @@ function loadBlob(id){if(isInline(id))return Promise.resolve(id);if(blobCache[id
 function hydrateImgs(){document.querySelectorAll("img[data-blob]").forEach(img=>{if(img.getAttribute("src")!==PH)return;loadBlob(img.dataset.blob).then(d=>{if(d&&img.isConnected)img.src=d})})}
 
 /* ---------- Speicher ---------- */
-const COLLS=["members","meetings","tx","payments","events","polls","decisions","people","config"];
+const COLLS=["members","meetings","tx","payments","events","polls","decisions","people","todos","config"];
 const lastSnap={};
 function applySnap(c,o){lastSnap[c]=o;if(c==="config"){if(o.settings)S.settings={beitrag:10,strafe:10,...o.settings}}else S[c]=c==="meetings"?normMeetings(o):o}
 function restore(c){if(lastSnap[c]){applySnap(c,lastSnap[c]);render()}}
@@ -286,10 +296,14 @@ function demoSeed(){
   return{members,meetings,
     tx:{t1:{date:`${y}-03-02`,kind:"out",amount:45,text:"Beispiel: Stammtisch-Schild"},t2:{date:`${y}-06-20`,kind:"out",amount:120,text:"Beispiel: Freibier Ausflug",eventId:"e1"},t3:{date:`${y}-06-20`,kind:"in",amount:60,text:"Beispiel: Fahrtkosten-Anteil",eventId:"e1"}},
     payments:{p1:{memberId:"m4",date:`${y}-02-10`,amount:100,note:"Vorauszahlung"}},
-    events:{e1:{title:"Beispiel: Ausflug Rax",date:`${y}-06-20`,place:"Reichenau",note:""},e2:{title:"Beispiel: Weihnachtsfeier",date:`${y}-12-19`,place:"Gasthaus",note:"Mit Partnerinnen und Partnern"}},
+    events:{e1:{title:"Beispiel: Ausflug Rax",date:`${y}-06-20`,place:"Reichenau",note:""},e2:{title:"Beispiel: Weihnachtsfeier",date:`${y}-12-19`,place:"Gasthaus",note:"Mit Partnerinnen und Partnern",createdBy:"d1"}},
     polls:{q1:{question:"Beispiel: Wohin geht der Ausflug 2027?",options:["Wachau","Neusiedler See","Salzkammergut"],closed:false,created:`${y}-10-01`}},
     decisions:{d1:{date:`${y}-03-16`,text:"Beispiel: Ab 2027 bleibt der Beitrag bei 10 €."}},
-    people:{demo:{memberId:"m0",rsvp:{},votes:{q1:0}}},
+    people:{demo:{memberId:"m0",rsvp:{},votes:{q1:0}},d1:{memberId:"m1",votes:{}}},
+    todos:{a1:{text:"Beispiel: Saal reservieren",assignee:"m0",due:`${y}-12-05`,eventId:"e2",meetingKey:"",done:false,createdBy:"demo",created:`${y}-10-20`},
+      a2:{text:"Beispiel: Musik organisieren",assignee:"m1",due:"",eventId:"e2",meetingKey:"",done:false,createdBy:"d1",created:`${y}-10-20`},
+      a3:{text:"Beispiel: Christbaum besorgen",assignee:"",due:"",eventId:"e2",meetingKey:"",done:false,createdBy:"demo",created:`${y}-10-21`},
+      a4:{text:"Beispiel: Angebot Bus für den Ausflug einholen",assignee:"m3",due:"",eventId:"",meetingKey:mkey(y,Math.max(0,today.getMonth()-1)),done:true,doneBy:"m3",createdBy:"demo",created:`${y}-10-01`}},
     config:{settings:{beitrag:10,strafe:10,excusedPays:true,frist:2}}};
 }
 
@@ -412,9 +426,15 @@ function renderAbend(){
           <div class="note">Das Los zieht unter den Anwesenden, wer heuer am seltensten gezahlt hat.</div>`:""}
       </div></div>`;
   }
+  const mtd=todosWhere(t=>t.meetingKey===k);
   h+=`<div class="card pad stack"><h3>Protokoll</h3>
     ${K()?`<textarea id="meNote" data-chg="meNote" placeholder="Was wurde besprochen, was ist ausgemacht?">${esc(mt.note||"")}</textarea><div class="note">Wird beim Verlassen des Felds gespeichert. Beschlüsse trägst du in der Chronik ein.</div>`
-      :mt.note?`<div style="white-space:pre-wrap">${esc(mt.note)}</div>`:`<div class="note">Kein Protokoll.</div>`}</div>`;
+      :mt.note?`<div id="noteView" style="white-space:pre-wrap">${esc(mt.note)}</div>`:`<div class="note">Kein Protokoll.</div>`}
+    ${canCreate()?`<div class="todo-box"><div class="row spread"><span class="lbl">Aufgaben aus diesem Abend</span>${(K()||mt.note)?`<button class="btn small" data-act="noteToTodo">Markierten Text als Aufgabe</button>`:""}</div>
+      ${mtd.length?`<ul class="list todos">${mtd.map(x=>todoItem(x,false)).join("")}</ul>`:""}
+      ${todoForm("mt-"+k,{meetingKey:k,eventSelect:true})}
+      <div class="note">Text im Protokoll markieren (oder den Cursor in eine Zeile setzen) und auf „Markierten Text als Aufgabe“ tippen. Dann nur noch auswählen, wer es macht.</div></div>`
+      :mtd.length?`<ul class="list todos">${mtd.map(x=>todoItem(x,false)).join("")}</ul>`:""}</div>`;
   h+=`<div class="card pad stack"><div class="row spread"><h3>Fotos</h3>
     ${K()&&(role.assets||role.demo)?`<label class="btn small">Fotos hinzufügen<input type="file" accept="image/*" multiple data-chg="photosUp" hidden></label>`:""}</div>
     ${(mt.photos||[]).length?`<div class="photos">${mt.photos.map(p=>`<figure><a href="#" data-act="viewImg" data-id="${esc(p)}"><img src="${imgSrc(p)}" data-blob="${esc(p)}" alt="Foto vom Stammtisch" loading="lazy"></a>${K()?`<button data-act="photoDel" data-id="${esc(p)}">Entfernen</button>`:""}</figure>`).join("")}</div>`:`<div class="note">Noch keine Fotos von diesem Abend.</div>`}</div>`;
@@ -431,18 +451,49 @@ const sinceTs=(()=>{let v=+lsGetS("stt-since");if(!v){v=Date.now();lsSetS("stt-s
 let seenAt=+lsGetS("stt-seen")||sinceTs;
 const ts=x=>typeof x==="number"?x:(Date.parse(x||"")||0);
 const isNewItem=o=>ts(o.created)>Math.max(sinceTs,view.seenSnap??seenAt);
-function todo(){const me=myMember(),r={polls:0,events:0,rsvp:0},since=Math.max(sinceTs,seenAt);
+function todo(){const me=myMember(),r={polls:0,events:0,rsvp:0,tasks:0},since=Math.max(sinceTs,seenAt);
+  if(me)r.tasks=Object.values(S.todos).filter(t=>!t.done&&t.assignee===me).length;
   if(me){const v=myPerson()?.votes||{};r.polls=Object.entries(S.polls).filter(([pid,p])=>!p.closed&&v[pid]==null).length;
     const k=nextMeetingKey();if(k){const mt=getMeeting(k);if(!mt.cancelled&&!rsvpMap(k)[me]&&todayISO<=deadline(mt))r.rsvp=1}}
   else r.polls=Object.values(S.polls).filter(p=>!p.closed&&ts(p.created)>since).length;
   r.events=Object.values(S.events).filter(e=>e.date>=todayISO&&ts(e.created)>since).length;
   return r}
-function updateBadges(){const t=todo(),n=t.polls+t.events+t.rsvp,b=document.querySelector('#tabs button[data-tab="termine"]');
+function updateBadges(){const t=todo(),n=t.polls+t.events+t.rsvp+t.tasks,b=document.querySelector('#tabs button[data-tab="termine"]');
   if(b){let d=b.querySelector(".dot");if(n&&view.tab!=="termine"){if(!d){d=document.createElement("span");d.className="dot";b.appendChild(d)}d.textContent=n;b.setAttribute("aria-label",`Termine, ${n} offen`)}
     else{if(d)d.remove();b.removeAttribute("aria-label")}}
   try{if(navigator.setAppBadge)n?navigator.setAppBadge(n):navigator.clearAppBadge()}catch{}}
 function pollResultText(p){const counts=p.options.map(()=>0);for(const pe of Object.values(S.people)){const v=pe.votes?.[Object.keys(S.polls).find(k=>S.polls[k]===p)];if(v!=null&&counts[v]!=null)counts[v]++}
   return`Ergebnis der Stammtisch-Umfrage „${p.question}“:\n`+p.options.map((o,i)=>`${o}: ${counts[i]} ${counts[i]===1?"Stimme":"Stimmen"}`).join("\n")}
+
+/* ---------- Wer darf was ---------- */
+const canCreate=()=>K()||!!myMember();
+const isMine=o=>!!(o&&o.createdBy&&o.createdBy===role.me);
+const canManage=o=>K()||isMine(o);
+const byName=o=>{const p=o&&o.createdBy&&S.people[o.createdBy];return p&&p.memberId&&S.members[p.memberId]?first(mName(p.memberId)):""};
+
+/* ---------- Aufgaben ---------- */
+const todosWhere=fn=>Object.entries(S.todos).filter(([,t])=>fn(t)).sort((a,b)=>(a[1].done-b[1].done)||((a[1].due||"9")>(b[1].due||"9")?1:-1)||(a[1].created||"").localeCompare(b[1].created||""));
+function todoItem([id,t],showCtx){
+  const who=t.assignee&&S.members[t.assignee]?first(mName(t.assignee)):"";
+  const late=!t.done&&t.due&&t.due<todayISO,ev=t.eventId&&S.events[t.eventId];
+  const ctx=showCtx?(ev?esc(ev.title):t.meetingKey?`Stammtisch ${keyName(t.meetingKey)}`:""):"";
+  const msg=`Servus ${who}, deine Aufgabe${ev?" für "+ev.title:""}: ${t.text}${t.due?" (bis "+fmtD(t.due)+")":""}. Danke!`;
+  return`<li class="todo${t.done?" done":""}"><label class="cb"><input type="checkbox" data-chg="todoDone" data-id="${id}" ${t.done?"checked":""} ${canCreate()?"":"disabled"} aria-label="Erledigt"><span class="todo-text">${esc(t.text)}</span></label>
+    <div class="row todo-meta">${who?`<span class="chip info">${esc(who)}</span>`:`<span class="chip warn">noch niemand</span>`}
+      ${t.due?`<span class="${late?"chip bad":"note"}">bis ${fmtD(t.due)}</span>`:""}${ctx?`<span class="note">${ctx}</span>`:""}
+      ${t.done&&t.doneBy&&S.members[t.doneBy]?`<span class="note">erledigt von ${esc(first(mName(t.doneBy)))}</span>`:""}
+      ${!t.done&&who&&canCreate()?`<a class="btn small" href="https://wa.me/${waNumber(S.members[t.assignee].phone)}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Erinnern</a>`:""}
+      ${canManage(t)?`<button class="btn small danger" data-act="todoDel" data-id="${id}">Löschen</button>`:""}</div></li>`}
+function todoForm(key,{eventId="",meetingKey="",eventSelect=false}={}){
+  if(!canCreate())return"";
+  const evs=Object.entries(S.events).filter(([,e])=>e.date>=todayISO).sort((a,b)=>a[1].date.localeCompare(b[1].date));
+  return`<form class="stack todo-form" data-form="todo" data-ev="${eventId}" data-mk="${meetingKey}">
+    <input type="text" name="text" id="tdText-${key}" data-keep maxlength="200" placeholder="Neue Aufgabe, z. B. Getränke besorgen" required>
+    <div class="row"><select name="who" id="tdWho-${key}" data-keep aria-label="Wer macht es?"><option value="">Wer? (noch offen)</option>${sortedMembers(false).map(([id,m])=>`<option value="${id}">${esc(m.name)}</option>`).join("")}</select>
+      <label class="row note">bis <input type="date" name="due" id="tdDue-${key}" data-keep></label>
+      ${eventSelect?`<select name="ev" id="tdEv-${key}" data-keep aria-label="Veranstaltung"><option value="">ohne Veranstaltung</option>${evs.map(([id,e])=>`<option value="${id}">${esc(e.title)}</option>`).join("")}</select>`:""}
+      <button class="btn primary small">Aufgabe anlegen</button></div></form>`}
+function todoShareText(title,list){return`Aufgaben ${title}:\n`+list.filter(([,t])=>!t.done).map(([,t])=>`- ${t.text}: ${t.assignee&&S.members[t.assignee]?first(mName(t.assignee)):"wer übernimmt?"}${t.due?" (bis "+fmtD(t.due)+")":""}`).join("\n")}
 
 function renderTermine(){
   const me=myMember();let h="";
@@ -450,6 +501,8 @@ function renderTermine(){
     h+=`<div class="card pad row spread"><label class="row">Ich bin <select data-chg="meSelect" id="meSel"><option value="">– bitte wählen –</option>${sortedMembers(false).map(([id,m])=>`<option value="${id}" ${id===me?"selected":""}>${esc(m.name)}</option>`).join("")}</select></label>
       <span class="note">Damit kannst du selbst zu- oder absagen und abstimmen.</span></div>`;
   }
+  if(me){const mine=todosWhere(t=>!t.done&&t.assignee===me);
+    if(mine.length)h+=`<h2>Meine Aufgaben</h2><div class="card"><ul class="list">${mine.map(x=>todoItem(x,true)).join("")}</ul></div>`}
   // Stammtische
   let k=nextMeetingKey()||curKey();const keys=[];for(let i=0;i<4;i++){keys.push(k);k=keyAdd(k,1)}
   h+=`<h2>Nächste Stammtische</h2><div class="card"><ul class="list">${keys.map(k=>{
@@ -472,31 +525,42 @@ function renderTermine(){
   const evs=Object.entries(S.events).sort((a,b)=>a[1].date.localeCompare(b[1].date));
   const up=evs.filter(([,e])=>e.date>=todayISO),past=evs.filter(([,e])=>e.date<todayISO).reverse();
   const evRow=([id,e])=>{let s=0;for(const t of Object.values(S.tx))if(t.eventId===id)s+=t.kind==="in"?+t.amount:-t.amount;
-    return`<li><div class="row spread"><div><b>${esc(e.title)}</b>${e.date>=todayISO&&isNewItem(e)?` <span class="chip new">Neu</span>`:""} <span class="note">${fmtDL(e.date)}${e.place?" · "+esc(e.place):""}</span></div>
-      <div class="row">${s?`<span class="chip ${s<0?"bad":"good"}">Kassa ${eur(s)}</span>`:""}${K()&&e.date>=todayISO?waBtn(`Stammtisch-Termin: ${e.title} am ${fmtDL(e.date)}${e.place?", "+e.place:""}.${e.note?" "+e.note:""}`,"Teilen"):""}${K()?`<button class="btn small danger" data-act="eventDel" data-id="${id}">Löschen</button>`:""}</div></div>
-      ${e.note?`<div class="note">${esc(e.note)}</div>`:""}</li>`};
+    const up_=e.date>=todayISO,td=todosWhere(t=>t.eventId===id),open=td.filter(([,t])=>!t.done).length,by=byName(e);
+    return`<li class="stack"><div class="row spread"><div><b>${esc(e.title)}</b>${up_&&isNewItem(e)?` <span class="chip new">Neu</span>`:""} <span class="note">${fmtDL(e.date)}${e.place?" · "+esc(e.place):""}${by?" · von "+esc(by):""}</span></div>
+      <div class="row">${s?`<span class="chip ${s<0?"bad":"good"}">Kassa ${eur(s)}</span>`:""}${canCreate()&&up_?waBtn(`Stammtisch-Termin: ${e.title} am ${fmtDL(e.date)}${e.place?", "+e.place:""}.${e.note?" "+e.note:""}`,"Teilen"):""}${canManage(e)?`<button class="btn small danger" data-act="eventDel" data-id="${id}">Löschen</button>`:""}</div></div>
+      ${e.note?`<div class="note">${esc(e.note)}</div>`:""}
+      ${up_?`<div class="todo-box"><div class="row spread"><span class="lbl">Aufgaben${td.length?` · ${open} offen`:""}</span>
+          <span class="row">${open&&canCreate()?waBtn(todoShareText(e.title,td),"Aufgaben teilen"):""}${canCreate()?`<button class="btn small" data-act="todoFor" data-id="${id}">${view.todoFor===id?"Schließen":"+ Aufgabe"}</button>`:""}</span></div>
+        ${td.length?`<ul class="list todos">${td.map(x=>todoItem(x,false)).join("")}</ul>`:""}
+        ${view.todoFor===id?todoForm("ev-"+id,{eventId:id}):""}</div>`:td.length?`<div class="note">${td.length-open} von ${td.length} Aufgaben erledigt</div>`:""}</li>`};
   h+=`<h2>Veranstaltungen</h2>`;
-  if(K())h+=`<div class="card pad"><form class="inline" data-form="event"><input type="text" id="evTitle" data-keep placeholder="z. B. Weihnachtsfeier" required>
+  if(canCreate())h+=`<div class="card pad"><form class="inline" data-form="event"><input type="text" id="evTitle" data-keep placeholder="z. B. Weihnachtsfeier" required>
     <input type="date" id="evDate" data-keep required><input type="text" id="evPlace" data-keep placeholder="Ort" style="flex:0 1 140px"><input type="text" id="evNote" data-keep placeholder="Notiz (optional)">
     <button class="btn primary">Anlegen</button></form></div>`;
   h+=`<div class="card"><ul class="list">${up.length?up.map(evRow).join(""):`<li class="empty">Keine geplanten Veranstaltungen.</li>`}${past.length?`<li class="note" style="background:var(--sunk)">Vergangen</li>`+past.slice(0,5).map(evRow).join(""):""}</ul></div>
-    <div class="note">Ausgaben und Einnahmen einer Veranstaltung buchst du in der Kasse und ordnest sie dort zu.</div>`;
+    <div class="note">${K()?"Ausgaben und Einnahmen einer Veranstaltung buchst du in der Kasse und ordnest sie dort zu.":canCreate()?"Jeder kann Veranstaltungen und Aufgaben anlegen. Löschen kann sie, wer sie angelegt hat, und der Kassier.":"Wähl oben aus, wer du bist, dann kannst du selbst Veranstaltungen, Abstimmungen und Aufgaben anlegen."}</div>`;
+  // Weitere Aufgaben (ohne Veranstaltung)
+  const other=todosWhere(t=>!(t.eventId&&S.events[t.eventId])),otherOpen=other.filter(([,t])=>!t.done),otherDone=other.filter(([,t])=>t.done);
+  h+=`<h2>Weitere Aufgaben</h2><div class="card">${otherOpen.length||(view.showDone&&otherDone.length)?`<ul class="list todos">${[...otherOpen,...(view.showDone?otherDone:[])].map(x=>todoItem(x,true)).join("")}</ul>`:`<div class="empty">Keine offenen Aufgaben.</div>`}
+    ${otherDone.length?`<div class="pad" style="padding-top:0"><button class="btn link" data-act="toggleDone">${view.showDone?"Erledigte ausblenden":`${otherDone.length} erledigte anzeigen`}</button></div>`:""}
+    ${canCreate()?`<div class="pad" style="border-top:1px solid var(--line)">${todoForm("gen",{eventSelect:true})}</div>`:""}</div>`;
   // Abstimmungen
   const polls=Object.entries(S.polls).sort((a,b)=>(b[1].created||"").localeCompare(a[1].created||""));
   h+=`<h2>Abstimmungen</h2>`;
-  if(K())h+=`<div class="card pad"><form class="stack" data-form="poll"><input type="text" id="pollQ" data-keep placeholder="Frage, z. B. Welches Lokal 2027?" required>
+  if(canCreate())h+=`<div class="card pad"><form class="stack" data-form="poll"><input type="text" id="pollQ" data-keep placeholder="Frage, z. B. Welches Lokal 2027?" required>
     <input type="text" id="pollO" data-keep placeholder="Antworten, mit Komma getrennt: Krone, Post, Hirsch" required><div><button class="btn primary">Abstimmung starten</button></div></form></div>`;
   const myVotes=myPerson()?.votes||{};
   h+=polls.length?polls.map(([pid,p])=>{
     const counts=p.options.map(()=>0);const voters=p.options.map(()=>[]);
     for(const pe of Object.values(S.people)){const v=pe.votes?.[pid];if(v!=null&&counts[v]!=null){counts[v]++;if(pe.memberId)voters[v].push(first(mName(pe.memberId)))}}
     const tot=counts.reduce((a,b)=>a+b,0);const canVote=me&&!p.closed;
-    return`<div class="card pad stack"><div class="row spread"><b>${esc(p.question)}</b><span class="row">${!p.closed&&isNewItem(p)?`<span class="chip new">Neu</span>`:""}${canVote&&myVotes[pid]==null?`<span class="chip warn">Noch nicht abgestimmt</span>`:""}${p.closed?`<span class="chip">beendet</span>`:""}</span></div>
+    const pby=byName(p);
+    return`<div class="card pad stack"><div class="row spread"><span><b>${esc(p.question)}</b>${pby?` <span class="note">von ${esc(pby)}</span>`:""}</span><span class="row">${!p.closed&&isNewItem(p)?`<span class="chip new">Neu</span>`:""}${canVote&&myVotes[pid]==null?`<span class="chip warn">Noch nicht abgestimmt</span>`:""}${p.closed?`<span class="chip">beendet</span>`:""}</span></div>
       ${p.options.map((o,i)=>`<div class="poll-opt"><div>${canVote?`<button class="btn small ${myVotes[pid]===i?"mine":""}" data-act="vote" data-p="${pid}" data-i="${i}">${esc(o)}</button>`:`<span>${esc(o)}</span>`}
         <span class="note">${voters[i].map(esc).join(", ")}</span></div><span class="num note">${counts[i]} ${counts[i]===1?"Stimme":"Stimmen"}</span>
         <div class="bar"><span style="width:${tot?counts[i]/tot*100:0}%"></span></div></div>`).join("")}
       ${!me&&!p.closed?`<div class="note">${role.me?"Wähl oben aus, wer du bist, um abzustimmen.":"Zum Abstimmen brauchst du einen Zugang mit Mitwirkungsrechten."}</div>`:""}
-      ${K()?`<div class="row">${p.closed?waBtn(pollResultText(p),"Ergebnis teilen"):waBtn(`Neue Umfrage beim Stammtisch: ${p.question}\nAntworten: ${p.options.join(", ")}\nBitte in der App abstimmen.`)}<button class="btn small" data-act="pollClose" data-p="${pid}">${p.closed?"Wieder öffnen":"Beenden"}</button><button class="btn small danger" data-act="pollDel" data-p="${pid}">Löschen</button></div>`:""}</div>`}).join("")
+      ${canCreate()?`<div class="row">${p.closed?waBtn(pollResultText(p),"Ergebnis teilen"):waBtn(`Neue Umfrage beim Stammtisch: ${p.question}\nAntworten: ${p.options.join(", ")}\nBitte in der App abstimmen.`)}${canManage(p)?`<button class="btn small" data-act="pollClose" data-p="${pid}">${p.closed?"Wieder öffnen":"Beenden"}</button><button class="btn small danger" data-act="pollDel" data-p="${pid}">Löschen</button>`:""}</div>`:""}</div>`}).join("")
     :`<div class="card empty">Keine Abstimmungen.</div>`;
   // Geburtstage
   const bd=sortedMembers(false).map(([id,m])=>[m,nextBirthday(m)]).filter(x=>x[1]).sort((a,b)=>a[1].date.localeCompare(b[1].date)).slice(0,6);
@@ -595,7 +659,7 @@ function renderLeute(){
     ${role.kassier
       ?`<div>${role.demo?"In der Vorschau bist du automatisch Kassier.":"Du bist auf diesem Gerät als <b>Kassier</b> angemeldet und kannst alles bearbeiten."}</div>
         <div class="row"><button class="btn small" data-act="asMember">${view.asMember?"Zurück zur Kassier-Ansicht":"Als Mitglied ansehen"}</button>${role.demo?"":`<button class="btn small danger" data-act="kassierOut">Als Kassier abmelden</button>`}</div>`
-      :`<div class="note">Mitglieder sehen alles, sagen selbst zu oder ab und stimmen ab. Wer den Kassier-PIN kennt, erfasst Anwesenheit, Zahlungen und Buchungen.</div>
+      :`<div class="note">Mitglieder sehen alles, sagen selbst zu oder ab, stimmen ab und legen Veranstaltungen, Abstimmungen und Aufgaben an. Wer den Kassier-PIN kennt, erfasst zusätzlich Anwesenheit, Zahlungen und Buchungen.</div>
         <form class="inline" data-form="kassierPin"><input type="password" id="kPin" autocomplete="off" autocapitalize="off" placeholder="Kassier-PIN" required><button class="btn primary">Als Kassier anmelden</button></form>`}
     </div>`;
   keep(()=>$("#v-leute").innerHTML=h);
@@ -757,6 +821,7 @@ async function exportXlsx(){
   add(Object.values(S.tx).sort((a,b)=>a.date.localeCompare(b.date)).map(t=>({Datum:t.date,Art:t.kind==="in"?"Einnahme":"Ausgabe",Text:t.text,Betrag:+t.amount,Veranstaltung:S.events[t.eventId]?.title||""})),"Buchungen");
   add(Object.values(S.payments).sort((a,b)=>a.date.localeCompare(b.date)).map(p=>({Datum:p.date,Mitglied:mName(p.memberId),Betrag:+p.amount,Notiz:p.note||""})),"Zahlungen");
   add(Object.values(S.decisions).sort((a,b)=>a.date.localeCompare(b.date)).map(d=>({Datum:d.date,Beschluss:d.text})),"Beschluesse");
+  add(Object.values(S.todos).sort((a,b)=>(a.created||"").localeCompare(b.created||"")).map(t=>({Aufgabe:t.text,Zustaendig:t.assignee?mName(t.assignee):"",Bis:t.due||"",Veranstaltung:S.events[t.eventId]?.title||"",Stammtisch:t.meetingKey?keyName(t.meetingKey):"",Erledigt:t.done?"ja":"nein"})),"Aufgaben");
   await saveFile(`Stammtisch-Export-${todayISO}.xlsx`,X.write(wb,{type:"array",bookType:"xlsx"}));
 }
 
@@ -811,15 +876,25 @@ const ACT={
   memToggle:b=>{const id=b.dataset.mid,n={...S.members[id],active:S.members[id].active===false};S.members[id]=n;store.set("members",id,n);render()},
   decDel:b=>confirmBtn(b,()=>{delete S.decisions[b.dataset.id];store.del("decisions",b.dataset.id);render()}),
   asMember:()=>{view.asMember=!view.asMember;render()},
+  todoFor:b=>{view.todoFor=view.todoFor===b.dataset.id?null:b.dataset.id;render();setTimeout(()=>document.getElementById("tdText-ev-"+b.dataset.id)?.focus(),0)},
+  todoDel:b=>confirmBtn(b,()=>{delete S.todos[b.dataset.id];store.del("todos",b.dataset.id);render();toast("Aufgabe gelöscht")}),
+  toggleDone:()=>{view.showDone=!view.showDone;render()},
+  noteToTodo:()=>{const k=curKey();let s="";const ta=$("#meNote");
+    if(ta){const a=ta.selectionStart??0,e=ta.selectionEnd??0,v=ta.value;s=v.slice(a,e);
+      if(!s.trim()){const st=v.lastIndexOf("\n",a-1)+1,en=v.indexOf("\n",a);s=v.slice(st,en<0?v.length:en)}}
+    else{try{const sel=getSelection();if(sel&&$("#noteView")?.contains(sel.anchorNode))s=String(sel)}catch{}}
+    s=s.trim().replace(/^[-*•–\d.)\s]+/,"").slice(0,200);
+    if(!s){toast("Markiere zuerst den Text im Protokoll.");return}
+    const el=document.getElementById("tdText-mt-"+k);if(el){el.value=s;el.focus();el.scrollIntoView({block:"center",behavior:"smooth"})}},
   exportPdf:()=>exportPdf(),exportXlsx:()=>exportXlsx()
 };
 const FORM={
   guest:f=>{const v=$("#guestName").value.trim();if(!v)return;const k=curKey();$("#guestName").value="";saveMeeting(k,{guests:[...(getMeeting(k).guests||[]),v]})},
   round:f=>{const v=$("#roundMem").value;if(!v)return;const k=curKey();saveMeeting(k,{rounds:[...(getMeeting(k).rounds||[]),v]});toast(`Runde von ${first(mName(v))} eingetragen`)},
-  event:f=>{const e={title:$("#evTitle").value.trim(),date:$("#evDate").value,place:$("#evPlace").value.trim(),note:$("#evNote").value.trim(),created:new Date().toISOString()};if(!e.title||!e.date)return;
+  event:f=>{const e={title:$("#evTitle").value.trim(),date:$("#evDate").value,place:$("#evPlace").value.trim(),note:$("#evNote").value.trim(),created:new Date().toISOString(),createdBy:role.me||""};if(!e.title||!e.date)return;
     const id=uid("e");S.events[id]=e;store.set("events",id,e);["#evTitle","#evDate","#evPlace","#evNote"].forEach(s=>$(s).value="");render();toast("Veranstaltung angelegt")},
   poll:f=>{const q=$("#pollQ").value.trim(),o=$("#pollO").value.split(",").map(s=>s.trim()).filter(Boolean);if(!q||o.length<2){toast("Bitte mindestens zwei Antworten angeben.");return}
-    const id=uid("q"),p={question:q,options:o,closed:false,created:new Date().toISOString()};S.polls[id]=p;store.set("polls",id,p);$("#pollQ").value="";$("#pollO").value="";render();toast("Abstimmung gestartet. Mit „In WhatsApp teilen“ gibst du der Runde Bescheid.")},
+    const id=uid("q"),p={question:q,options:o,closed:false,created:new Date().toISOString(),createdBy:role.me||""};S.polls[id]=p;store.set("polls",id,p);$("#pollQ").value="";$("#pollO").value="";render();toast("Abstimmung gestartet. Mit „In WhatsApp teilen“ gibst du der Runde Bescheid.")},
   payment:f=>{const amt=Math.round(parseFloat($("#payAmt").value)*100)/100;if(!(amt>0))return;const id=uid("p");
     const p={memberId:f.dataset.mid,date:$("#payDate").value||todayISO,amount:amt,note:$("#payNote").value.trim()};S.payments[id]=p;store.set("payments",id,p);
     view.payFor=null;$("#payAmt").value="";$("#payNote").value="";render();toast(`${eur(amt)} von ${first(mName(p.memberId))} gebucht`)},
@@ -833,11 +908,17 @@ const FORM={
     S.members[id]=n;store.set("members",id,n);view.editMem=null;render();toast("Gespeichert")},
   settings:f=>{const s={beitrag:Math.max(0,+$("#setB").value||0),strafe:Math.max(0,+$("#setS").value||0)};
     S.settings=s;store.set("config","settings",s);render();toast("Regeln gespeichert")},
+  todo:f=>{const g=n=>f.querySelector(`[name=${n}]`);const text=g("text").value.trim();if(!text||!canCreate())return;
+    const t={text,assignee:g("who").value||"",due:g("due").value||"",eventId:(g("ev")?g("ev").value:f.dataset.ev)||"",meetingKey:f.dataset.mk||"",done:false,doneAt:"",doneBy:"",createdBy:role.me||"",created:new Date().toISOString()};
+    const id=uid("a");S.todos[id]=t;store.set("todos",id,t);g("text").value="";g("due").value="";render();
+    toast(t.assignee?`Aufgabe für ${first(mName(t.assignee))} angelegt`:"Aufgabe angelegt")},
   decision:f=>{const d={date:$("#decDate").value||todayISO,text:$("#decText").value.trim()};if(!d.text)return;const id=uid("d");S.decisions[id]=d;store.set("decisions",id,d);$("#decText").value="";render();toast("Beschluss festgehalten")}
 };
 const CHG={
   mDate:el=>{if(el.value)saveMeeting(curKey(),{date:el.value})},
-  meNote:el=>{const k=curKey();if((getMeeting(k).note||"")!==el.value)saveMeeting(k,{note:el.value})},
+  meNote:el=>{const k=curKey(),v=el.value;setTimeout(()=>{if((getMeeting(k).note||"")!==v)saveMeeting(k,{note:v})},350)},
+  todoDone:el=>{const id=el.dataset.id,t=S.todos[id];if(!t)return;const n={...t,done:el.checked,doneAt:el.checked?new Date().toISOString():"",doneBy:el.checked?(myMember()||""):""};
+    S.todos[id]=n;store.set("todos",id,n);render();if(el.checked)toast("Erledigt. Danke!")},
   photosUp:async el=>{const files=[...el.files];if(!files.length)return;toast("Fotos werden hochgeladen …");const k=curKey();const ids=await uploadFiles(files);
     if(ids.length){saveMeeting(k,{photos:[...(getMeeting(k).photos||[]),...ids]});toast(`${ids.length} Foto${ids.length>1?"s":""} hinzugefügt`)}},
   txFile:el=>{pendingReceipt=el.files[0]||null;const n=$("#txFileName");if(n)n.textContent=pendingReceipt?pendingReceipt.name:""},
@@ -858,7 +939,7 @@ try{const t=localStorage.getItem("stt-tab");if(t&&$("#v-"+t))view.tab=t}catch{}
 render();
 let watching=false;
 function startWatching(){if(watching)return;watching=true;store.ready=true;
-  const cols=["members","meetings","tx","payments","events","polls","decisions","people"];
+  const cols=["members","meetings","tx","payments","events","polls","decisions","people","todos"];
   for(const c of cols)store.watch(c,o=>{applySnap(c,o);render()});
   store.watch("config",o=>{applySnap("config",o);render()});
   render();

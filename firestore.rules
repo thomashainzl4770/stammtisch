@@ -32,7 +32,27 @@ service cloud.firestore {
       allow write: if isMember() && (request.auth.uid == uid || isKassier());
     }
 
-    // Alles andere (Mitglieder, Abende, Kasse, Termine, Fotos …):
+    // Abstimmungen und Veranstaltungen: jedes Mitglied darf welche anlegen;
+    // ändern/löschen darf, wer sie angelegt hat, und der Kassier
+    match /polls/{id} {
+      allow create: if isMember() && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if isMember() && resource.data.createdBy == request.auth.uid;
+    }
+    match /events/{id} {
+      allow create: if isMember() && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if isMember() && resource.data.createdBy == request.auth.uid;
+    }
+
+    // Aufgaben: jedes Mitglied darf anlegen und abhaken;
+    // ändern/löschen darf, wer sie angelegt hat, und der Kassier
+    match /todos/{id} {
+      allow create: if isMember() && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isMember() && (resource.data.createdBy == request.auth.uid
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'doneAt', 'doneBy']));
+      allow delete: if isMember() && resource.data.createdBy == request.auth.uid;
+    }
+
+    // Alles andere (Mitglieder, Abende, Kasse, Fotos …) und der Kassier überall:
     // freigeschaltete Mitglieder lesen, nur der Kassier schreibt
     match /{coll}/{id} {
       allow read:  if isMember() && !(coll in ['secret', 'admins', 'access']);
